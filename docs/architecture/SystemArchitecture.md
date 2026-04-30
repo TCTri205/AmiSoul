@@ -1,77 +1,61 @@
-# Mục tiêu Kiến trúc Logic - AmiSoul
+# Kiến trúc Hệ thống (System Architecture) - AmiSoul
 
-**Dự án:** AmiSoul - Người Bạn Đồng Hành AI Thấu Cảm
-**Phiên bản:** v3.0.0
-**Trạng thái:** Định nghĩa Thành phần Logic
-**Cập nhật lần cuối:** 2026-04-29
-
----
-
-> [!NOTE]
-> Tài liệu này mô tả các **thành phần logic** cần thiết cho hệ thống. Các công nghệ, nhà cung cấp và phương pháp triển khai cụ thể sẽ được quyết định thông qua nghiên cứu chuyên sâu hơn.
-
-## 1. Các Thành phần Chức năng
-
-Để đạt được tầm nhìn AmiSoul, hệ thống yêu cầu các lĩnh vực chức năng cốt lõi sau:
-
-### 1.1. Thành phần Giao diện (Interface Component)
-- **Vai trò:** Quản lý trải nghiệm người dùng, hiển thị hội thoại và phản hồi trực quan.
-- **Trách nhiệm:** 
-    - Hiển thị đối thoại động.
-    - Quản lý trạng thái cục bộ để phản hồi tương tác tức thì.
-    - Thúc đẩy thẩm mỹ "Yên tĩnh & Thân mật" (Quiet & Intimate).
-
-### 1.2. Thành phần Điều phối (Orchestration Component)
-- **Vai trò:** Đóng vai trò là bộ não của hệ thống, điều phối luồng dữ liệu giữa đầu vào người dùng, bộ nhớ và suy luận.
-- **Trách nhiệm:**
-    - Xử lý các yêu cầu của người dùng.
-    - Xây dựng ngữ cảnh đầy đủ cho mỗi lần tương tác.
-    - Kích hoạt việc trích xuất thông tin từ đối thoại.
-
-### 1.3. Thành phần Trí tuệ (Intelligence Component)
-- **Vai trò:** Cung cấp khả năng suy luận và xử lý thông tin ngữ cảnh.
-- **Trách nhiệm:**
-    - Tạo ra các phản hồi thấu cảm, nhất quán với tính cách (persona).
-    - Nhận diện các sự kiện quan trọng và manh mối cảm xúc từ đầu vào người dùng.
-
-### 1.4. Thành phần Bền bỉ & Bộ nhớ (Persistence & Memory Component)
-- **Vai trò:** Quản lý an toàn thông tin dài hạn và hồ sơ người dùng.
-- **Trách nhiệm:**
-    - Lưu trữ nhật ký đối thoại để đảm bảo tính liên tục ngắn hạn.
-    - Duy trì kho lưu trữ các ký ức ngữ cảnh đã trích xuất.
-    - Đảm bảo cách ly dữ liệu nghiêm ngặt giữa các người dùng.
+**Dự án:** AmiSoul - Người Bạn Đồng Hành AI Thấu Cảm  
+**Phiên bản:** ACE v2.1 (v3.0.0)
+**Trạng thái:** Thiết kế Kỹ thuật Chi tiết (**Full-stack TypeScript**)
+**Cập nhật lần cuối:** 2026-04-30
 
 ---
 
-## 2. Các Luồng Logic Cốt lõi
+## 1. Triết lý Thiết kế: AmiSoul Cognitive Engine (ACE)
 
-### 2.1. Chu kỳ Tương tác
-1. **Thu thập (Capture):** Nhận đầu vào của người dùng thông qua giao diện.
-2. **Làm giàu (Enrich):** Truy xuất lịch sử đối thoại liên quan và các ký ức dài hạn.
-3. **Tạo phản hồi (Generate):** Xử lý ngữ cảnh đã làm giàu để tạo ra phản hồi phù hợp với tính cách.
-4. **Phân phối (Deliver):** Hiển thị phản hồi cho người dùng với nhịp điệu phù hợp.
-5. **Cập nhật (Update):** (Bất đồng bộ) Trích xuất thông tin mới từ đầu vào và cập nhật kho lưu trữ bộ nhớ của người dùng.
+ACE không phải là một chatbot thông thường, mà là một hệ thống **Nhận thức đa tầng** được thiết kế để mô phỏng sự thấu cảm của con người qua 4 giai đoạn xử lý thời gian thực và một vòng lặp củng cố dài hạn.
 
----
-
-## 3. Các Thực thể Dữ liệu
-
-Hệ thống phải quản lý về mặt logic:
-- **Hồ sơ Người dùng (User Profiles):** Thông tin nhận diện cơ bản và cài đặt tương tác.
-- **Nhật ký Đối thoại (Dialogue Logs):** Bản ghi theo trình tự thời gian của các lượt tương tác.
-- **Ký ức Ngữ cảnh (Contextual Memories):** Các sự kiện quan trọng, sở thích và thông tin trích xuất từ hội thoại.
+### 1.1. Mục tiêu Cốt lõi
+- **Deep Empathy:** Thấu cảm sâu sắc thông qua việc ghi nhớ cảm xúc (Affective Memory).
+- **Real-time Latency:** Phản hồi dưới 3 giây cho văn bản thô.
+- **Dynamic Identity:** Tính cách AI tiến hóa dựa trên mức độ gắn kết (Bonding Score).
 
 ---
 
-## 4. Yêu cầu An ninh & Quyền riêng tư
+## 2. Các Thành phần Hệ thống (Core Components)
 
-- **Cách ly Dữ liệu:** Tách biệt logic nghiêm ngặt đảm bảo người dùng chỉ có thể truy cập lịch sử tương tác và ký ức của chính họ.
-- **Giao tiếp An toàn:** Tất cả việc truyền tải dữ liệu giữa các thành phần phải được bảo vệ bằng các giao thức bảo mật tiêu chuẩn ngành.
-- **Kiểm soát Truy cập:** Xác thực và ủy quyền được xác minh cho tất cả các giao diện hướng tới người dùng.
+### 2.1. Interface Layer (Tầng Giao tiếp)
+- **Công nghệ:** Socket.io / NestJS.
+- **Chức năng:** Quản lý kết nối thời gian thực, xử lý Debounce tin nhắn (Stage 0), hiển thị chỉ báo cảm xúc.
+
+### 2.2. Perception Layer (Tầng Nhận thức - Stage 1)
+- **Công nghệ:** SLM (Gemma-2b) hoặc Cloud API (Gemini Flash).
+- **Chiến lược:** Dùng Prompt-based routing qua Cloud API trong giai đoạn phát triển để tối ưu RAM cho máy 8GB.
+- **Chức năng:** Phân tích sentiment, intent, complexity và điều hướng yêu cầu.
+
+### 2.3. Memory & Context Layer (Tầng Bộ nhớ - Stage 2 & CAL)
+- **Công nghệ:** Redis (L1) & PostgreSQL/pgvector (L2/CMA) qua Prisma.
+- **Chức năng:** 
+    - **CMA:** Truy xuất ký ức theo cảm xúc và độ tương đồng vector.
+    - **CAL:** Theo dõi thói quen, sự kiện sắp diễn ra và trạng thái dở dang.
+
+### 2.4. Cognitive Engine (Tầng Giả lập - Stage 3)
+- **Công nghệ:** Gemini-1.5-Flash SDK (Node.js).
+- **Chức năng:** Tổng hợp toàn bộ ngữ cảnh (Persona, Vibe, Bonding, Memory) để sinh phản hồi thấu cảm duy nhất (Single-pass).
+
+### 2.5. Offline Consolidation (Tầng Củng cố - Stage 5)
+- **Công nghệ:** BullMQ / Background Workers.
+- **Chức năng:** Nén trí nhớ, cập nhật điểm số gắn kết (Bonding) và tinh chỉnh tính cách (DPE) sau mỗi phiên.
 
 ---
 
-## 5. Mục tiêu Hiệu suất & Khả năng Mở rộng
-- **Nhịp điệu Tự nhiên:** Hệ thống phải đưa ra phản hồi trong khung thời gian hỗ trợ nhịp điệu hội thoại dự kiến.
-- **Bền vững Tài nguyên:** Kiến trúc phải cho phép vận hành hiệu quả trong ranh giới tài nguyên đã xác định.
-- **Đồng hành Logic:** Khả năng xử lý truy xuất bộ nhớ và suy luận song song để tối ưu hóa tốc độ tương tác.
+## 3. Bản đồ Dữ liệu (Data Topology)
+
+| Vị trí | Dữ liệu Lưu trữ | Vai trò |
+|---|---|---|
+| **Redis (RAM)** | Session Vibe, CAL L1, Debounce Buffer | Trạng thái tức thời, truy xuất < 50ms. |
+| **Vector DB** | Episodic Memories (CMA) | Trí nhớ sự kiện dài hạn, tìm kiếm theo vector. |
+| **Relational DB** | Bonding, DPE, User Profiles, CAL L2 | Dữ liệu cấu trúc, bền vững, ACID (Prisma Managed). |
+
+---
+
+## 4. Tài liệu Tham chiếu
+- **[Chi tiết Tech Stack](./TechStack.md)**
+- **[Thiết kế Kỹ thuật Chi tiết](./TechnicalArchitecture.md)**
+- **[Thiết kế Hệ thống Hợp nhất (ACE v2.1)](../method/unified_system_design.md)**

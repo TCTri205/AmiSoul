@@ -1,5 +1,9 @@
 # Thiết kế Hệ thống Hợp nhất: AmiSoul Cognitive Engine (ACE v2.1)
 
+**Phiên bản:** v3.0.0
+**Cập nhật lần cuối:** 2026-04-30
+
+
 Tài liệu này hợp nhất các phương án kiến trúc nhận thức (CMA, DPE, MECP) thành một hệ thống duy nhất cho AmiSoul, được tối ưu hóa cho môi trường nhắn tin theo thời gian thực (Real-time Messaging). Mục tiêu là tạo ra một AI có khả năng thấu cảm sâu sắc, trí nhớ bền vững, đồng thời đảm bảo độ trễ thấp (Latency < 3s) và tối ưu chi phí.
 
 > [!IMPORTANT]
