@@ -1,29 +1,28 @@
 # [EPIC-03] Affective Memory & CAL System (Stage 2)
 
 ## 1. Mô tả
-Triển khai hệ thống bộ nhớ nhận thức (CMA) và tầng nhận thức ngữ cảnh (CAL). Epic này cung cấp "ký ức" và "nhận thức thời gian" cho AmiSoul, giúp AI không chỉ nhớ sự kiện mà còn thấu hiểu cảm xúc đi kèm và những mong đợi dở dang của người dùng.
+Xây dựng hệ thống lưu trữ và truy xuất ký ức theo cảm xúc (Affective Memory) và quản lý các sự kiện đang diễn ra (Cognitive Anticipation Layer - CAL). EPIC này đảm bảo AI có khả năng nhớ lại quá khứ một cách chọn lọc và nhận thức được các bối cảnh hiện tại của người dùng.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [ ] Kích hoạt Extension `pgvector` trên PostgreSQL thành công.
-- [ ] **Affective Retrieval:** Thuật toán truy xuất kết hợp độ tương đồng Vector (Cosine Similarity) và sự tương đồng cảm xúc (Sentiment Alignment).
-- [ ] **CAL L1 (Redis):** Quản lý các sự kiện "nóng" (`Expectations`, `Pending States`) với độ trễ truy xuất < 10ms.
-- [ ] **CAL L2 (PostgreSQL):** Lưu trữ bền vững các trạng thái CAL dài hạn.
-- [ ] **Context Merging:** Hợp nhất Context từ 4 nguồn (Vibe, CAL, CMA, History) theo tỷ lệ Budget 3000 tokens.
-- [ ] Nhận diện được sự lệch chuẩn hành vi (`Behavioral_Baseline`) dựa trên lịch sử hoạt động.
+- [x] **CMA (Comprehensive Memory Archive):** Truy xuất ký ức episodic sử dụng pgvector với thuật toán Affective Retrieval.
+- [x] **CAL (Cognitive Anticipation Layer):** Lấy dữ liệu sự kiện nóng từ Redis (L1) và PostgreSQL (L2).
+- [x] **Truth Hierarchy:** Giải quyết mâu thuẫn thông tin theo thứ tự ưu tiên: Persona Shield > Session Vibe > Bonding > DPE > CMA.
+- [x] **Time Anomaly:** Nhận diện các thay đổi bất thường trong thói quen sinh hoạt của người dùng.
+- [x] **Bonding Filter:** Giới hạn độ sâu và độ nhạy cảm của ký ức truy xuất dựa trên điểm thân thiết.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
-- **T3.1:** Cấu hình Prisma Client để thực hiện `$queryRaw` tìm kiếm vector trên bảng `Memories`.
-- **T3.2:** Xây dựng `ContextRetrieverService` để điều phối việc lấy dữ liệu từ Redis và PostgreSQL song song.
-- **T3.3:** Triển khai logic `Truth Hierarchy`: Ưu tiên thông tin từ CAL (Sự kiện đang diễn ra) > CMA (Ký ức cũ).
-- **T3.4:** Xây dựng cơ chế nhúng (Embedding) sử dụng Gemini Embedding API cho các câu hỏi của người dùng.
-- **T3.5:** Triển khai `Time_Anomaly_Detector` để nhận biết các yêu cầu ngoài khung giờ sinh hoạt thông thường.
-- **T3.6:** Tích hợp `Bonding_Gate`: Giới hạn mức độ nhạy cảm của ký ức được truy xuất dựa trên điểm thân thiết hiện tại.
-- **T3.7:** Viết Unit Test cho logic trộn Context (Context Injection Logic).
+- **[T3.1: Prisma Vector Query](../ticket/Sprint-03/T3.1_Prisma_Vector_Query.md)**
+- **[T3.2: Context Retriever Service](../ticket/Sprint-03/T3.2_Context_Retriever_Service.md)**
+- **[T3.3: Truth Hierarchy Logic](../ticket/Sprint-03/T3.3_Truth_Hierarchy_CAL_CMA.md)**
+- **[T3.4: Gemini Embedding API](../ticket/Sprint-03/T3.4_Gemini_Embedding_API.md)**
+- **[T3.5: Time Anomaly Detector](../ticket/Sprint-03/T3.5_Time_Anomaly_Detector.md)**
+- **[T3.6: Bonding Gate Sensitivity](../ticket/Sprint-03/T3.6_Bonding_Gate_Sensitivity.md)**
+- **[T3.7: Context Injection Test](../ticket/Sprint-03/T3.7_Context_Injection_Test.md)**
 
 ## 4. Rủi ro & Giảm thiểu (Risks & Mitigation)
-- **Rủi ro:** Số lượng ký ức quá lớn làm chậm query Vector.
-- **Giảm thiểu:** Sử dụng Index HNSW (Hierarchical Navigable Small World) và phân mảnh ký ức theo `user_id`.
+- **Rủi ro:** Truy xuất quá nhiều ký ức dẫn đến tràn Context Window (Token Budget).
+- **Giảm thiểu:** Thiết lập **Token Budget Manager** (Sprint 04) và thuật toán xếp hạng Affective Score để chỉ lấy 3-5 ký ức liên quan nhất.
 
 ## 5. Phụ thuộc (Dependencies)
-- **Epic:** [EPIC-01], [EPIC-02].
-- **Tài liệu:** [TechnicalArchitecture.md](file:///d:/Persional_Projects/AmiSoul/docs/architecture/TechnicalArchitecture.md) (Phần 2.2 & 3.0).
+- **Hạ tầng:** PostgreSQL với pgvector extension.
+- **Tài liệu:** [TechnicalArchitecture.md](../../architecture/TechnicalArchitecture.md) (Phần 2.2).

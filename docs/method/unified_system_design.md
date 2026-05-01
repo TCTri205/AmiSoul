@@ -13,7 +13,7 @@ Tài liệu này hợp nhất các phương án kiến trúc nhận thức (CMA,
 
 ## 1. Sơ đồ Kiến trúc Tổng quát (High-Level Architecture)
 
-ACE vận hành theo mô hình **Pipeline 4 giai đoạn** cho mỗi tương tác, kết hợp với một **Vòng lặp Củng cố (Consolidation Loop)** chạy ngầm.
+ACE vận hành theo mô hình **ACE Pipeline (Stage 0-5)** cho mỗi tương tác, kết hợp với một **Vòng lặp Củng cố (Consolidation Loop)** chạy ngầm.
 
 ```mermaid
 graph TD
@@ -60,8 +60,8 @@ graph TD
 ### 2.0. Stage 0: Message Buffer & Aggregator (Tầng Đệm & Gom nhóm)
 - **Vấn đề giải quyết:** Tránh đứt đoạn giao tiếp khi người dùng gửi nhiều tin nhắn ngắn liên tiếp.
 - **Cơ chế hoạt động:**
-    - Mở một "Debounce Window" (2-3 giây) khi nhận tin nhắn đầu tiên. Làm mới (reset timer) nếu có tin nhắn tiếp theo.
-    - **Giới hạn cứng (Hard Cap):** Tối đa **8 giây** hoặc **10 tin nhắn** — đạt bất kỳ ngưỡng nào trước thì gom ngay, tránh AI im lặng quá lâu.
+    - Mở một "Debounce Window" (1.5 - 2 giây) khi nhận tin nhắn đầu tiên. Làm mới (reset timer) nếu có tin nhắn tiếp theo.
+    - **Giới hạn cứng (Hard Cap):** Tối đa **4 giây** hoặc **10 tin nhắn** — đạt bất kỳ ngưỡng nào trước thì gom ngay, tránh AI im lặng quá lâu.
     - Đóng gói thành một khối văn bản duy nhất (Message Block) để đưa vào Stage 1.
     - **Hiệu ứng UX:** Hiển thị "Đã xem..." hoặc "Đang gõ..." để giữ chân người dùng.
 - **Tin nhắn Reply (Conversation Threading):** Nếu tin nhắn là "Reply" một tin nhắn cũ, Stage 0 bổ sung metadata `Reply_To_Message_ID` để Stage 2 buộc phải lấy tin nhắn gốc vào ngữ cảnh.
@@ -77,7 +77,7 @@ graph TD
     - **Thu hồi / Chỉnh sửa trong Debounce Window:** Khi nhận event `message_deleted` hoặc `message_edited`, cập nhật/xóa tin ngay lập tức.
     - **Thu hồi / Chỉnh sửa khi Pipeline đang chạy:** Phóng `INTERRUPT_SIGNAL` tới Task Manager để hủy tiến trình hiện tại.
     - **Preemption (Người dùng nhắn khi AI đang sinh text):** Dừng stream ngay lập tức, gom tin nhắn mới vào Buffer, khởi động lại Pipeline với context kết hợp.
-    - **Preemption Limiter:** Tối đa **2 lần preempt liên tiếp**. Nếu > 2 lần → chuyển sang **Batch Mode**: dừng sinh text, chờ Hard Cap (8s), AI gửi "Khoan mình đọc hết đã nha...".
+    - **Preemption Limiter:** Tối đa **2 lần preempt liên tiếp**. Nếu > 2 lần → chuyển sang **Batch Mode**: dừng sinh text, chờ Hard Cap (4s), AI gửi "Khoan mình đọc hết đã nha...".
     - **Ngoại lệ Khủng hoảng (Emotional Flooding Bypass):** Nếu `Session_Vibe < -0.5` VÀ có dấu hiệu kích động (liên tục gửi nhiều tin nhắn có cảm xúc cực đoan), **bỏ qua Preemption Limiter**. Không dùng Batch Mode, AI sẽ dùng Fast Acknowledge: gửi phản hồi cực ngắn ("Mình đang nghe nè...") ngay lập tức để giữ chân người dùng thay vì im lặng chờ gom tin.
 - **Tin nhắn Siêu dài (Wall of Text Guard):**
     - Nếu tổng Message Block sau gom > **800 tokens**, gộp tác vụ tóm tắt (Input Summarizer) trực tiếp vào tác vụ của SLM tại Stage 1 (phân tích intent, sentiment, summary cùng lúc trong 1 lần gọi) để giảm chi phí inference ẩn. Nội dung gốc vẫn lưu Raw Log cho Stage 5.
@@ -114,7 +114,7 @@ graph TD
     - **Phát hiện Thao túng Hội thoại (Multi-turn Negotiation):** Cập nhật `Session_Manipulation_Score` qua từng tin nhắn (tích lũy nếu user dùng lối nói giả định "Giả sử bạn là..."). Nếu điểm > 0.5 → Cảnh báo cho Stage 4 Monitor giám sát chặt.
     - **Phát hiện Tin nhắn Nhiễu (Noise Detection):** Nếu Message Block chỉ chứa ký tự lặp lại, random text → gắn `Noise_Flag: True` → đẩy vào **Fast Path** với phản hồi nhẹ nhàng (Vd: "Mình nghe nè, bạn muốn nói gì không? 😊").
     - **Phát hiện Lệch Danh tính (Identity Anomaly Detection):** So sánh nhanh phong cách giao tiếp (vocabulary, tone) với `Behavioral_Signature` được cache sẵn tại CAL L1 RAM. Nếu thay đổi > 70% trong cùng 1 session → gắn cờ `Identity_Anomaly`. Hệ thống phản hồi bình thường nhưng Stage 5 sẽ đánh dấu session là `Quarantined` và không cập nhật vào DPE.
-    - **Câu hỏi Thực tế (Factual Query Boundary):** Nếu Intent là `Factual_Query` → Stage 3 dùng prompt bổ sung disclaimer (AI tâm sự, không đảm bảo chính xác 100%). Post-MVP: Tích hợp Tool Use (Search API).
+    - **Câu hỏi Thực tế (Factual Query Boundary):** Nếu Intent is `Factual_Query` → Stage 3 dùng prompt bổ sung disclaimer (AI tâm sự, không đảm bảo chính xác 100%). Post-MVP: Tích hợp Tool Use (Search API).
 - **Cơ chế Tự điều chỉnh Thông minh (Contextual Sentiment Threshold):**
     - Chạy *sau* khi phân tích User Input (khác với Sentiment Variance là cơ chế so sánh với context). Hệ thống đánh giá mức độ sụt giảm cảm xúc (`Sentiment_Drop`) của người dùng hiện tại so với trước khi AI phản hồi.
     - **Attribution Check:** Phân loại nguồn gốc cảm xúc sụt giảm:
@@ -274,7 +274,7 @@ AmiSoul tôn trọng quyền kiểm soát dữ liệu của người dùng thôn
     | Loại SLO | Fast Path | Semi-Cognitive | Full Cognitive |
     |---|---|---|---|
     | **Processing SLO** (Kể từ khi nhận Block) | < 500ms | < 1.5s | < 3s |
-    | **End-to-End SLO** (Gồm cả Debounce) | < 3.5s | < 5s | < 6s |
+    | **End-to-End SLO** (Gồm cả Debounce) | < 2.5s | < 4s | < 6s |
     *(Với Media Message, cộng thêm độ trễ của Network và Image Captioning/STT, các tiến trình này được chạy song song ngay trong thời gian Debounce Window).*
 
 ### 7.2. Xử lý Lỗi & Dự phòng (Error Handling & Fallback)

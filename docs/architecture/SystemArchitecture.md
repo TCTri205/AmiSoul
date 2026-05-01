@@ -9,7 +9,7 @@
 
 ## 1. Triết lý Thiết kế: AmiSoul Cognitive Engine (ACE)
 
-ACE không phải là một chatbot thông thường, mà là một hệ thống **Nhận thức đa tầng** được thiết kế để mô phỏng sự thấu cảm của con người qua 4 giai đoạn xử lý thời gian thực và một vòng lặp củng cố dài hạn.
+ACE không phải là một chatbot thông thường, mà là một hệ thống **Nhận thức đa tầng** được thiết kế để mô phỏng sự thấu cảm của con người qua quy trình **ACE Pipeline (Stage 0-5)**.
 
 ### 1.1. Mục tiêu Cốt lõi
 - **Deep Empathy:** Thấu cảm sâu sắc thông qua việc ghi nhớ cảm xúc (Affective Memory).

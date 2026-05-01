@@ -29,10 +29,10 @@ Mục tiêu là xây dựng hệ thống **AmiSoul Cognitive Engine (ACE)** hoà
 | Cột mốc | Mục tiêu | Sản phẩm bàn giao chính | Thời gian |
 | :--- | :--- | :--- | :--- |
 | **M1: Nền tảng** | Hạ tầng & Stage 0 | NestJS, Docker, Redis, PostgreSQL setup. Hoàn thiện Stage 0 (Debounce & Aggregator). | Tuần 1-2 |
-| **M2: Não bộ** | Pipeline Stage 1-3 | Tích hợp vLLM (Router), pgvector (CMA/CAL) và Gemini Flash (Simulation). | Tuần 3-4 |
+| **M2: Não bộ** | Pipeline Stage 1-3 & Security | Tích hợp vLLM (Router), pgvector (CMA/CAL) và Prisma Encryption Middleware. | Tuần 3-4 |
 | **M3: Tương tác** | Frontend & Stage 4 | UI Safe Harbor, Socket.io Streaming, Giao diện cảm xúc & Safety Monitor. | Tuần 5-6 |
-| **M4: Củng cố** | Stage 5 & Bonding | BullMQ Workers, Memory Compression, Bonding Evolution logic. | Tuần 7-8 |
-| **M5: Tối ưu** | QA & Deployment | Load test (1000 CCU), Tinh chỉnh Latency SLO, Triển khai Production. | Tuần 9 |
+| **M4: Củng cố** | Stage 5 & Feedback | BullMQ Workers, Memory Compression, Implicit Feedback Loop. | Tuần 7-8 |
+| **M5: Tối ưu** | QA & Deployment | Load test (1000 CCU), Tinh chỉnh Latency SLO (E2E < 6s), Triển khai Production. | Tuần 9 |
 
 ---
 
@@ -71,3 +71,10 @@ Mục tiêu là xây dựng hệ thống **AmiSoul Cognitive Engine (ACE)** hoà
 *   **Trạng thái Tài liệu:** Toàn bộ đặc tả kỹ thuật phải được cập nhật tại `/docs/architecture`.
 *   **Kiểm thử:** Unit test cho các Stage logic; Integration test cho toàn bộ Pipeline.
 *   **CI/CD:** Tự động hóa kiểm tra mã nguồn và triển khai môi trường Staging.
+
+---
+
+## 7. Lộ trình Triển khai Chi tiết
+Chi tiết các Epic và danh sách Ticket cho từng Sprint có thể được theo dõi tại:
+*   **[Epics Backlog & Sprint Roadmap](file:///d:/Persional_Projects/AmiSoul/docs/project_managements/epic/Epics_Backlog.md)**
+*   **[Sprint Tickets](file:///d:/Persional_Projects/AmiSoul/docs/project_managements/ticket/)**

@@ -3,7 +3,7 @@
 **Phiên bản:** ACE v2.1 (v3.0.0)
 **Cập nhật lần cuối:** 2026-04-30
 
-Tài liệu này chi tiết hóa cách triển khai các thành phần logic của ACE v2.1 lên hạ tầng kỹ thuật đã chọn (Node.js/NestJS).
+Tài liệu này chi tiết hóa cách triển khai các thành phần logic của ACE v2.1 (Stage 0-5) lên hạ tầng kỹ thuật đã chọn (Node.js/NestJS).
 
 ---
 
@@ -44,8 +44,8 @@ graph LR
 ### 2.1. Stage 0: Buffer & Debounce
 - Khi tin nhắn đến via Socket.io:
     1. Kiểm tra Redis key `debounce:{user_id}`.
-    2. Nếu chưa có: Tạo key, set TTL 2.5s, khởi chạy một Timer/Timeout trong Node.js.
-    3. Nếu đã có: Append tin nhắn vào list `buffer:{user_id}` trong Redis, reset Timer (nếu chưa quá Hard Cap 8s).
+    2. Nếu chưa có: Tạo key, set TTL 1.5s, khởi chạy một Timer/Timeout trong Node.js.
+    3. Nếu đã có: Append tin nhắn vào list `buffer:{user_id}` trong Redis, reset Timer (nếu chưa quá Hard Cap 4s).
     4. **Async Interrupt (Preemption):** Nếu nhận tin nhắn mới khi Pipeline (Stage 1-3) đang chạy, API Gateway phát tín hiệu hủy (AbortSignal) để dừng stream hiện tại, gom tin mới và khởi động lại Pipeline.
     5. Khi Timer hết hạn: Gom toàn bộ tin nhắn, xóa key, đẩy vào Stage 1.
 
