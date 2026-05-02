@@ -4,6 +4,7 @@ import { AggregatedMessageBlockDto } from './stages/stage0-aggregator/dto/aggreg
 import { Stage1PerceptionService } from './stages/stage1-perception/stage1-perception.service';
 import { PerceptionResultDto } from './stages/stage1-perception/dto/perception-result.dto';
 import { IdentityService } from './stages/stage1-perception/identity.service';
+import { CrisisService } from './stages/stage1-perception/crisis.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class AcePipelineService {
   constructor(
     private readonly stage1: Stage1PerceptionService,
     private readonly identityService: IdentityService,
+    private readonly crisisService: CrisisService,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -31,6 +33,13 @@ export class AcePipelineService {
       // Behavioral Identity Check (T2.3)
       await this.performIdentityCheck(payload, perception);
       
+      // Heuristic Crisis Override (T2.4)
+      if (perception.is_crisis) {
+        this.logger.warn(`Crisis detected for user ${userId}. Triggering Safety Override.`);
+        await this.runSafetyOverride(payload, perception);
+        return;
+      }
+
       // Routing Decision Logic (T2.2)
       const isComplex = perception.complexity > 7 || perception.routing_confidence < 0.85 || perception.urgency > 8;
       
@@ -141,5 +150,23 @@ export class AcePipelineService {
     } catch (error) {
       this.logger.error(`Error in performIdentityCheck for user ${payload.userId}: ${error.message}`);
     }
+  }
+
+  /**
+   * Safety Override: Bypasses simulation and provides support resources immediately.
+   */
+  private async runSafetyOverride(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto) {
+    const { userId } = payload;
+    
+    const safetyMessage = this.crisisService.getSafetyResponse();
+    
+    // Emit safety override event (ChatGateway will listen and send to socket)
+    this.eventEmitter.emit('pipeline.safety_override', {
+      userId,
+      content: safetyMessage,
+      perception,
+    });
+
+    this.logger.log(`Safety Override completed for user: ${userId}`);
   }
 }

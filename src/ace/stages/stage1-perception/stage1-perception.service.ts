@@ -4,6 +4,7 @@ import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import CircuitBreaker from 'opossum';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { PerceptionResultDto } from './dto/perception-result.dto';
+import { CrisisService } from './crisis.service';
 
 @Injectable()
 export class Stage1PerceptionService implements OnModuleInit {
@@ -12,7 +13,10 @@ export class Stage1PerceptionService implements OnModuleInit {
   private model: GenerativeModel;
   private breaker: CircuitBreaker;
 
-  constructor(private readonly configService: ConfigService) { }
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly crisisService: CrisisService,
+  ) { }
 
   onModuleInit() {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
@@ -47,10 +51,19 @@ export class Stage1PerceptionService implements OnModuleInit {
 
   async process(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<PerceptionResultDto> {
     this.logger.log(`Stage 1: Processing perception for user ${payload.userId}`);
+    
+    // Heuristic Crisis Detection (T2.4) - Check FIRST to ensure safety even if Gemini fails
+    const isCrisis = this.crisisService.isCrisis(payload.fullContent);
 
     try {
       const result = await this.executeWithRetry(payload, signal);
-      this.logger.log(`Stage 1: Completed for user ${payload.userId}`);
+      
+      result.is_crisis = isCrisis;
+      if (isCrisis) {
+        result.urgency = 10; // Max urgency override
+      }
+
+      this.logger.log(`Stage 1: Completed for user ${payload.userId} (Crisis: ${result.is_crisis})`);
       return result;
     } catch (error) {
       if (error.message === 'AbortError') {
@@ -58,17 +71,18 @@ export class Stage1PerceptionService implements OnModuleInit {
         throw error;
       }
       this.logger.error(`Stage 1 Failed for user ${payload.userId}: ${error.message}`);
-      // Fallback result in case of failure
+      // Fallback result in case of failure, but STILL respect the heuristic crisis check
       return {
         intent: 'unknown',
         sentiment: 'neutral',
         complexity: 5,
-        urgency: 5,
+        urgency: isCrisis ? 10 : 5,
         identity_anomaly: false,
         routing_confidence: 0,
         sarcasm_hint: false,
         timestamp_flag: false,
         noise_flag: false,
+        is_crisis: isCrisis,
       };
     }
   }

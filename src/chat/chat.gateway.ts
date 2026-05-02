@@ -117,6 +117,21 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     // In T2.1, this will trigger Stage 1: Perception Layer
   }
 
+  @OnEvent('pipeline.safety_override')
+  handleSafetyOverride(payload: { userId: string; content: string; perception: any }) {
+    this.logger.warn(`Emitting Safety Response for user: ${payload.userId}`);
+    
+    this.server.to(`user:${payload.userId}`).emit('ai_response', {
+      content: payload.content,
+      role: 'system_safety',
+      metadata: {
+        is_crisis: true,
+        urgency: 10,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   private extractToken(client: Socket): string | null {
     if (client.handshake.auth?.token) return client.handshake.auth.token;
     if (client.handshake.query?.token) return client.handshake.query.token as string;

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Stage1PerceptionService } from './stage1-perception.service';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { SessionType } from '../../../chat/dto/message.dto';
+import { CrisisService } from './crisis.service';
 
 // Mocking GoogleGenerativeAI
 const mockModel = {
@@ -29,6 +30,13 @@ describe('Stage1PerceptionService', () => {
               if (key === 'GEMINI_API_KEY') return 'test-api-key';
               return null;
             }),
+          },
+        },
+        {
+          provide: CrisisService,
+          useValue: {
+            isCrisis: jest.fn().mockReturnValue(false),
+            getSafetyResponse: jest.fn().mockReturnValue('Safety Response'),
           },
         },
       ],
@@ -84,7 +92,7 @@ describe('Stage1PerceptionService', () => {
 
       const result = await service.process(payload);
 
-      expect(result).toEqual(mockResult);
+      expect(result).toEqual({ ...mockResult, is_crisis: false });
       expect(mockModel.generateContent).toHaveBeenCalled();
     });
 
@@ -103,6 +111,7 @@ describe('Stage1PerceptionService', () => {
         sarcasm_hint: false,
         timestamp_flag: false,
         noise_flag: false,
+        is_crisis: false,
       });
     });
 
@@ -158,6 +167,35 @@ describe('Stage1PerceptionService', () => {
       expect(mockModel.generateContent).not.toHaveBeenCalled();
       // Should still return fallback even when circuit is open
       expect(result.intent).toBe('unknown');
+    });
+
+    it('should flag crisis and set max urgency when CrisisService returns true', async () => {
+      const crisisPayload = { ...payload, fullContent: 'Tôi muốn tự tử' };
+      const mockCrisisService = (service as any).crisisService;
+      mockCrisisService.isCrisis.mockReturnValue(true);
+
+      const mockResult = {
+        intent: 'venting',
+        sentiment: 'negative',
+        complexity: 1,
+        urgency: 1,
+        identity_anomaly: false,
+        routing_confidence: 1.0,
+        sarcasm_hint: false,
+        timestamp_flag: false,
+        noise_flag: false,
+      };
+
+      mockModel.generateContent.mockResolvedValue({
+        response: {
+          text: () => JSON.stringify(mockResult),
+        },
+      });
+
+      const result = await service.process(crisisPayload);
+
+      expect(result.is_crisis).toBe(true);
+      expect(result.urgency).toBe(10);
     });
   });
 });

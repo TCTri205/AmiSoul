@@ -8,5 +8,6 @@ export class PerceptionResultDto {
   sarcasm_hint: boolean;
   timestamp_flag: boolean;
   noise_flag: boolean;
+  is_crisis: boolean;
   summary?: string;
 }
