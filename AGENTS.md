@@ -18,8 +18,9 @@ The AmiSoul project adheres to the following standards to ensure empathy and per
 - **Minimalism (Safe Harbor):** Design and solutions should provide a sense of calm, simplicity, and intimacy.
 
 ## 🛡️ Safety & Security
-- **Secrets:** Never commit `.env` or API keys. Use environment variables.
-- **Data Integrity:** Always ask for user confirmation before performing destructive actions (`migrate reset`, `docker down -v`).
+- **Forbidden Files (Hard Boundary):** NEVER read, modify, or delete `.env` files or their variations (`.env.local`, `.env.production`, etc.). These files are excluded in `settings.json` and must be treated as a "No-Go Zone".
+- **Secrets:** Never commit secrets, tokens, or API keys. Use `.env.example` to define required variables.
+- **Data Integrity:** Always ask for user confirmation before performing destructive actions (`migrate reset`, `docker down -v`, or overwriting non-boilerplate files).
 - **Privacy:** Comply with all security and user privacy regulations.
 
 ## 📝 Documentation & Workflow Management
