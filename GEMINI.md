@@ -18,7 +18,7 @@ Welcome **Antigravity/Gemini**. This is the "Source of Truth" designed specifica
 Every interaction in AmiSoul passes through a 6-stage processing flow:
 
 1.  **Stage 0: Message Buffer & Aggregator (Real-time)**
-    *   Aggregates consecutive short messages (Debounce 1.5s - 4s) into a **Message Block**.
+    *   Aggregates consecutive short messages (Debounce 2.5s - 4s) into a **Message Block**.
     *   Supports **Preemption**: Cancels current text generation if a new message arrives.
 2.  **Stage 1: Perception & Smart Router (SLM)**
     *   Analyzes Intent, Sentiment, Complexity (1-10), and Urgency.
@@ -80,6 +80,7 @@ The project is divided into 9 Sprints. Current status:
   - [T1.5: Timer Debounce Logic](docs/project_managements/ticket/Sprint-01/T1.5_Timer_Debounce_Logic.md)
   - [T1.6: AbortSignal Preemption](docs/project_managements/ticket/Sprint-01/T1.6_AbortSignal_Preemption.md)
   - [T1.7: Unit Test Aggregator](docs/project_managements/ticket/Sprint-01/T1.7_Unit_Test_Aggregator.md)
+  - [Security Hardening: Enforce .env Prohibition] — `✅ Completed`.
 - **Next Goal:** **Sprint-02 (Perception & Intelligent Routing)**.
 
 ---

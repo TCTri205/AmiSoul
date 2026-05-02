@@ -1,0 +1,10 @@
+# Cursor Rules - AmiSoul Security
+
+## Environment File Protection
+- **CRITICAL:** Do NOT read, write, or search through `.env` or any `.env.*` files (except `.env.example`).
+- If you need environment variables, refer ONLY to `.env.example`.
+- If a value is missing, ask the user to provide it.
+
+## Safety First
+- Always follow the protocols in `AGENTS.md` and `.agents/rules/security.md`.
+- Never commit secrets or API keys.

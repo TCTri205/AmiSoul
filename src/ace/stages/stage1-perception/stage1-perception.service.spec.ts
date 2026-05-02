@@ -1,24 +1,59 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { Stage1PerceptionService } from './stage1-perception.service';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { SessionType } from '../../../chat/dto/message.dto';
+
+// Mocking GoogleGenerativeAI
+const mockModel = {
+  generateContent: jest.fn(),
+};
+
+jest.mock('@google/generative-ai', () => ({
+  GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
+    getGenerativeModel: jest.fn().mockReturnValue(mockModel),
+  })),
+}));
 
 describe('Stage1PerceptionService', () => {
   let service: Stage1PerceptionService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [Stage1PerceptionService],
+      providers: [
+        Stage1PerceptionService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string) => {
+              if (key === 'GEMINI_API_KEY') return 'test-api-key';
+              return null;
+            }),
+          },
+        },
+      ],
     }).compile();
 
     service = module.get<Stage1PerceptionService>(Stage1PerceptionService);
+    
+    // Initialize the service manually
+    service.onModuleInit();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+    mockModel.generateContent.mockReset();
+    // Close the breaker after each test to avoid state leakage
+    if ((service as any).breaker) {
+      (service as any).breaker.close();
+    }
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('should process perception and return intent', async () => {
+  describe('process', () => {
     const payload: AggregatedMessageBlockDto = {
       userId: 'user1',
       messages: [{ content: 'hello', timestamp: '' }],
@@ -28,62 +63,83 @@ describe('Stage1PerceptionService', () => {
       aggregatedAt: '',
     };
 
-    // Use a short timeout for simulation in tests if possible, 
-    // but the service has 2000ms hardcoded. We might need to mock simulateWork or wait.
-    // Let's use jest.spyOn to speed up the test.
-    jest.spyOn(service as any, 'simulateWork').mockResolvedValue(undefined);
+    it('should return perception results on success', async () => {
+      const mockResult = {
+        intent: 'greeting',
+        sentiment: 'positive',
+        complexity: 2,
+        urgency: 1,
+        identity_anomaly: false,
+      };
 
-    const result = await service.process(payload);
+      mockModel.generateContent.mockResolvedValue({
+        response: {
+          text: () => JSON.stringify(mockResult),
+        },
+      });
 
-    expect(result).toEqual({
-      intent: 'general_chat',
-      sentiment: 'neutral',
-      urgency: 1,
-    });
-  });
+      const result = await service.process(payload);
 
-  describe('simulateWork and AbortSignal', () => {
-    it('should resolve if not aborted', async () => {
-      // Use fake timers to advance the 2000ms wait
-      jest.useFakeTimers();
-      const promise = (service as any).simulateWork(100);
-      jest.advanceTimersByTime(100);
-      await expect(promise).resolves.toBeUndefined();
-      jest.useRealTimers();
+      expect(result).toEqual(mockResult);
+      expect(mockModel.generateContent).toHaveBeenCalled();
     });
 
-    it('should reject if signal is already aborted', async () => {
+    it('should return fallback results on Gemini API failure', async () => {
+      mockModel.generateContent.mockRejectedValue(new Error('API Error'));
+
+      const result = await service.process(payload);
+
+      expect(result).toEqual({
+        intent: 'unknown',
+        sentiment: 'neutral',
+        complexity: 5,
+        urgency: 5,
+        identity_anomaly: false,
+      });
+    });
+
+    it('should retry up to 3 times on transient failure', async () => {
+      mockModel.generateContent
+        .mockRejectedValueOnce(new Error('Transient Error'))
+        .mockRejectedValueOnce(new Error('Transient Error'))
+        .mockResolvedValue({
+          response: {
+            text: () => JSON.stringify({ intent: 'greeting', sentiment: 'neutral', complexity: 1, urgency: 1, identity_anomaly: false }),
+          },
+        });
+
+      const result = await service.process(payload);
+
+      expect(result.intent).toBe('greeting');
+      expect(mockModel.generateContent).toHaveBeenCalledTimes(3);
+    });
+
+    it('should respect AbortSignal', async () => {
       const controller = new AbortController();
       controller.abort();
-      
-      await expect((service as any).simulateWork(100, controller.signal))
+
+      await expect(service.process(payload, controller.signal))
         .rejects.toThrow('AbortError');
     });
 
-    it('should reject when signal is aborted during work', async () => {
-      jest.useFakeTimers();
-      const controller = new AbortController();
-      
-      const promise = (service as any).simulateWork(1000, controller.signal);
-      
-      jest.advanceTimersByTime(500);
-      controller.abort();
-      
-      await expect(promise).rejects.toThrow('AbortError');
-      jest.useRealTimers();
-    });
+    it('should open circuit breaker on multiple failures', async () => {
+      // Force failure to trigger circuit breaker
+      mockModel.generateContent.mockRejectedValue(new Error('Persistent Error'));
 
-    it('should remove event listener after resolution', async () => {
-      const controller = new AbortController();
-      const removeSpy = jest.spyOn(controller.signal, 'removeEventListener');
+      // Fire multiple times to trigger circuit breaker (default threshold 50%)
+      for (let i = 0; i < 15; i++) {
+        await service.process(payload);
+      }
+
+      expect((service as any).breaker.opened).toBe(true);
       
-      jest.useFakeTimers();
-      const promise = (service as any).simulateWork(100, controller.signal);
-      jest.advanceTimersByTime(100);
-      await promise;
+      // Subsequent call should fail fast without calling generateContent
+      mockModel.generateContent.mockClear();
+      const result = await service.process(payload);
       
-      expect(removeSpy).toHaveBeenCalledWith('abort', expect.any(Function));
-      jest.useRealTimers();
+      expect(mockModel.generateContent).not.toHaveBeenCalled();
+      // Should still return fallback even when circuit is open
+      expect(result.intent).toBe('unknown');
     });
   });
 });
