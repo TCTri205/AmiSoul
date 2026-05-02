@@ -3,6 +3,8 @@ import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { AggregatedMessageBlockDto } from './stages/stage0-aggregator/dto/aggregated-message-block.dto';
 import { Stage1PerceptionService } from './stages/stage1-perception/stage1-perception.service';
 import { PerceptionResultDto } from './stages/stage1-perception/dto/perception-result.dto';
+import { IdentityService } from './stages/stage1-perception/identity.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AcePipelineService {
@@ -10,6 +12,8 @@ export class AcePipelineService {
 
   constructor(
     private readonly stage1: Stage1PerceptionService,
+    private readonly identityService: IdentityService,
+    private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -23,6 +27,9 @@ export class AcePipelineService {
       
       // Stage 1: Perception (Always runs as the Router)
       const perception = await this.stage1.process(payload, signal);
+      
+      // Behavioral Identity Check (T2.3)
+      await this.performIdentityCheck(payload, perception);
       
       // Routing Decision Logic (T2.2)
       const isComplex = perception.complexity > 7 || perception.routing_confidence < 0.85 || perception.urgency > 8;
@@ -89,5 +96,50 @@ export class AcePipelineService {
     // Stage 4: Monitor (Still needed for safety)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 4: Monitoring fast session for user: ${userId}`);
+  }
+
+  /**
+   * Helper to perform behavioral identity check and update perception metadata
+   */
+  private async performIdentityCheck(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { bondingScore: true },
+      });
+
+      if (!user) {
+        this.logger.warn(`User ${payload.userId} not found during identity check`);
+        return;
+      }
+
+      const identityResult = await this.identityService.calculateAnomaly(
+        payload.userId,
+        payload,
+        user.bondingScore,
+      );
+
+      // If behavioral deviation is high (> 0.7), flag as anomaly
+      if (!identityResult.isBypassed && identityResult.anomalyScore > 0.7) {
+        this.logger.warn(`Identity Anomaly Detected for user ${payload.userId} (Score: ${identityResult.anomalyScore.toFixed(2)})`);
+        perception.identity_anomaly = true;
+        
+        // Emit specific event for Gateway/Monitor to react (T2.3)
+        this.eventEmitter.emit('identity.anomaly', {
+          userId: payload.userId,
+          score: identityResult.anomalyScore,
+          metrics: identityResult.metrics,
+        });
+      }
+
+      // Update behavioral baseline in background if no anomaly is suspected (by both LLM and Heuristics)
+      if (!perception.identity_anomaly && !identityResult.isBypassed) {
+        this.identityService.updateSignature(payload.userId, payload).catch(err => 
+          this.logger.error(`Failed to update behavioral signature for ${payload.userId}: ${err.message}`)
+        );
+      }
+    } catch (error) {
+      this.logger.error(`Error in performIdentityCheck for user ${payload.userId}: ${error.message}`);
+    }
   }
 }
