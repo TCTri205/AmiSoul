@@ -1,0 +1,37 @@
+{
+  "terminal.execute.policy": "Auto",
+  "artifacts.auto_accept": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.next": true,
+    "**/.env": true,
+    "**/.env.local": true,
+    "**/.env.development": true,
+    "**/.env.production": true,
+    "**/.env.example": false
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/*.log": true,
+    "**/prisma/migrations": true,
+    "**/.env": true,
+    "**/.env.local": true,
+    "**/.env.development": true,
+    "**/.env.production": true,
+    "**/.env.example": false
+  },
+  "agent.standards": {
+    "enforce": "AGENTS.md",
+    "architecture": "GEMINI.md",
+    "tech": "tech_standards.md"
+  }
+}
