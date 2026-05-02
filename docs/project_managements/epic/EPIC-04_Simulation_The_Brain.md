@@ -1,7 +1,7 @@
 # [EPIC-04] Unified Cognitive Simulation (Stage 3)
 
 ## 1. Mô tả
-Triển khai "trái tim" của hệ thống - Simulation Service (Stage 3). EPIC này tập trung vào việc tạo ra các phản hồi thấu cảm, tự nhiên và mang đậm bản sắc cá nhân của Ami thông qua kỹ thuật Prompt Engineering nâng cao và mô hình Gemini 1.5 Flash.
+Triển khai "trái tim" của hệ thống - Simulation Service (Stage 3). EPIC này tập trung vào việc tạo ra các phản hồi thấu cảm, tự nhiên và mang đậm bản sắc cá nhân của Ami thông qua kỹ thuật Prompt Engineering nâng cao và mô hình Gemini 2.5 Flash.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
 - [ ] **Single-Pass Generation:** Tạo phản hồi bao gồm cả nội dung text và các metadata hành động/emoji trong một lượt gọi duy nhất.

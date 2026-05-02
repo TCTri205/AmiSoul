@@ -23,7 +23,7 @@ export class Stage1PerceptionService implements OnModuleInit {
 
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       generationConfig: {
         responseMimeType: 'application/json',
       },
@@ -65,6 +65,10 @@ export class Stage1PerceptionService implements OnModuleInit {
         complexity: 5,
         urgency: 5,
         identity_anomaly: false,
+        routing_confidence: 0,
+        sarcasm_hint: false,
+        timestamp_flag: false,
+        noise_flag: false,
       };
     }
   }
@@ -105,22 +109,36 @@ export class Stage1PerceptionService implements OnModuleInit {
    * Internal method called by the Circuit Breaker
    */
   private async callGeminiInternal(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<PerceptionResultDto> {
+    const isLongBlock = payload.fullContent.length > 2500; // Rough estimate for 800-1000 tokens
+    
     const systemPrompt = `
-      You are the Perception Layer of AmiSoul, an empathetic AI companion.
-      Analyze the following message block from a user and output a JSON object.
+      You are the Perception Layer (Stage 1) of AmiSoul, an empathetic AI companion.
+      Your task is to analyze the user's message block and extract metadata for pipeline routing.
       
-      Schema:
+      Output ONLY a JSON object matching this schema:
       {
-        "intent": "string (one of: greeting, question, venting, sharing, seeking_advice, closing, unknown)",
-        "sentiment": "string (one of: positive, neutral, negative)",
-        "complexity": "number (1-10, based on depth of emotion or topic)",
-        "urgency": "number (1-10, based on emotional distress or immediate need)",
-        "identity_anomaly": "boolean (false unless the tone is extremely erratic or inconsistent)",
-        "summary": "string (optional, a 1-sentence summary of the message block, only provide if the content is long)"
+        "intent": "greeting" | "question" | "venting" | "sharing" | "seeking_advice" | "closing" | "forget_me" | "delete_memory" | "factual_query" | "unknown",
+        "sentiment": "positive" | "neutral" | "negative",
+        "complexity": number (1-10),
+        "urgency": number (1-10),
+        "identity_anomaly": boolean (true if tone is erratic or uncharacteristic),
+        "routing_confidence": number (0.0-1.0, how sure you are about the intent/routing),
+        "sarcasm_hint": boolean,
+        "timestamp_flag": boolean (true if the user mentions time, dates, or schedules),
+        "noise_flag": boolean (true if the input is gibberish, empty, or just symbols),
+        "summary": "string" (ONLY provide a 1-sentence summary if requested)
       }
+
+      Context/Instructions:
+      - 'forget_me' / 'delete_memory': Use if user wants to wipe data or stop being remembered.
+      - 'factual_query': Use for non-emotional, data-seeking questions (e.g., "What is 2+2?").
+      - 'routing_confidence': If the user is vague, set this < 0.85.
+      - ${isLongBlock ? 'MANDATORY: Provide a concise 1-sentence summary of the main points.' : 'Omit the summary field unless the content is exceptionally dense.'}
       
-      User messages:
+      User message block:
+      """
       ${payload.fullContent}
+      """
     `;
 
     try {
@@ -129,7 +147,9 @@ export class Stage1PerceptionService implements OnModuleInit {
       const text = response.text();
 
       try {
-        return JSON.parse(text) as PerceptionResultDto;
+        // Robust JSON parsing: handle potential markdown wrapping if it occurs
+        const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanedText) as PerceptionResultDto;
       } catch (e) {
         this.logger.error(`Failed to parse Gemini response: ${text}`);
         throw new Error('Invalid response format from AI');

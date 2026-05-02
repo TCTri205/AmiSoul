@@ -70,6 +70,10 @@ describe('Stage1PerceptionService', () => {
         complexity: 2,
         urgency: 1,
         identity_anomaly: false,
+        routing_confidence: 0.95,
+        sarcasm_hint: false,
+        timestamp_flag: false,
+        noise_flag: false,
       };
 
       mockModel.generateContent.mockResolvedValue({
@@ -95,6 +99,10 @@ describe('Stage1PerceptionService', () => {
         complexity: 5,
         urgency: 5,
         identity_anomaly: false,
+        routing_confidence: 0,
+        sarcasm_hint: false,
+        timestamp_flag: false,
+        noise_flag: false,
       });
     });
 
@@ -104,7 +112,17 @@ describe('Stage1PerceptionService', () => {
         .mockRejectedValueOnce(new Error('Transient Error'))
         .mockResolvedValue({
           response: {
-            text: () => JSON.stringify({ intent: 'greeting', sentiment: 'neutral', complexity: 1, urgency: 1, identity_anomaly: false }),
+            text: () => JSON.stringify({
+              intent: 'greeting',
+              sentiment: 'neutral',
+              complexity: 1,
+              urgency: 1,
+              identity_anomaly: false,
+              routing_confidence: 0.9,
+              sarcasm_hint: false,
+              timestamp_flag: false,
+              noise_flag: false
+            }),
           },
         });
 

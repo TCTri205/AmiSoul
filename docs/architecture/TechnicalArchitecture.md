@@ -51,8 +51,8 @@ graph LR
 
 ### 2.2. Stage 1 & 2: Nhận thức & Truy xuất
 - **Stage 1 (Router):** 
-    - Gọi Gemini Flash API để lấy JSON: `{intent, sentiment, complexity, urgency, identity_anomaly}`.
-    - **Summarization:** Nếu Message Block > 800 tokens, yêu cầu Gemini tóm tắt ngay trong cùng 1 lần gọi (Multi-task Prompt).
+    - Gọi Gemini 2.5 Flash API để lấy JSON: `{intent, sentiment, complexity, urgency, identity_anomaly}`.
+    - **Summarization:** Nếu Message Block > 800 tokens, yêu cầu Gemini 2.5 Flash tóm tắt ngay trong cùng 1 lần gọi (Multi-task Prompt).
     - **Identity Check:** So sánh style nhắn tin với `Behavioral_Signature` trong Redis để phát hiện `Identity_Anomaly`.
 - **Stage 2 (Parallel):**
     - **CAL Check:** Đọc Redis (L1) bằng `ioredis`.
@@ -60,7 +60,7 @@ graph LR
 - **Merge Context:** Tổng hợp thành Prompt theo đúng tỷ lệ Budget (3000 tokens).
 
 ### 2.3. Stage 3 & 4: Giả lập & Giám sát
-- **Stage 3:** Stream phản hồi từ Gemini SDK về API Gateway để User thấy "đang trả lời".
+- **Stage 3:** Stream phản hồi từ Gemini 2.5 Flash SDK về API Gateway để User thấy "đang trả lời".
 - **Stage 4:** 
     - Kiểm tra Safety (Heuristic/Regex) và cập nhật `Session_Vibe` vào Redis.
     - **CAL Fast-track Sync:** Thực hiện trích xuất nhanh các kỳ vọng (Expectations) hoặc trạng thái dở dang (Pending States) từ phản hồi vừa sinh và ghi trực tiếp vào Redis L1 (TTL 24h) để tạo nhận thức tức thời cho các tin nhắn sau trong cùng phiên.
@@ -84,7 +84,7 @@ Tiến trình này được xử lý bởi **BullMQ Workers** chạy tách biệ
 
 1. **Memory Compression:** 
     - Lấy toàn bộ Log của session từ Redis/DB.
-    - Dùng LLM (Gemini Flash) tóm tắt thành Episodic Nodes.
+    - Dùng LLM (Gemini 2.5 Flash) tóm tắt thành Episodic Nodes.
     - Tạo Vector Embedding và lưu vào pgvector.
 2. **Persona & Bonding Update:**
     - Tính toán `Bonding_Delta` dựa trên Sentiment/Frequency của session.

@@ -39,7 +39,7 @@ Mục tiêu là xây dựng hệ thống **AmiSoul Cognitive Engine (ACE)** hoà
 ## 3. Quản lý Tài nguyên & Chi phí
 ### 3.1. Tài nguyên Kỹ thuật
 - **Backend:** Node.js/NestJS (Orchestration).
-- **AI Hosting:** vLLM/Ollama cho SLM (Stage 1); Google AI SDK cho Gemini Flash (Stage 3).
+- **AI Hosting:** vLLM/Ollama cho SLM (Stage 1); Google AI SDK cho Gemini 2.5 Flash (Stage 3).
 - **Infrastructure:** Docker Compose cho giai đoạn đầu, tiến tới K8s nếu cần mở rộng.
 
 ### 3.2. Tối ưu Chi phí (Cost Management)
@@ -60,7 +60,7 @@ Mục tiêu là xây dựng hệ thống **AmiSoul Cognitive Engine (ACE)** hoà
 ## 5. Quản lý Rủi ro
 | Rủi ro | Tác động | Chiến lược Giảm thiểu |
 | :--- | :--- | :--- |
-| **Độ trễ LLM Cloud tăng cao** | Cao | Sử dụng Gemini Flash (tốc độ cao) và có phương án Fallback sang SLM nội bộ. |
+| **Độ trễ LLM Cloud tăng cao** | Cao | Sử dụng Gemini 2.5 Flash (tốc độ cao) và có phương án Fallback sang SLM nội bộ. |
 | **Chi phí API vượt ngân sách** | Trung bình | Áp dụng Daily Token Budget cho mỗi user và tối ưu Prompt. |
 | **Xung đột bộ nhớ (CMA)** | Thấp | Sử dụng thuật toán HNSW cho pgvector và quy tắc Memory Conflict Resolution. |
 | **Ảo giác AI (Hallucination)** | Trung bình | Sử dụng RAG (CMA) mạnh mẽ và Prompt Constraints (ToM/Grice). |

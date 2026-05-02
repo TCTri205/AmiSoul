@@ -55,7 +55,7 @@ Every interaction in AmiSoul passes through a 6-stage processing flow:
 
 - **Backend:** NestJS (Node.js) + TypeScript.
 - **AI Models:** 
-  - **Gemini 1.5 Flash:** Primary processing (Reasoning, Simulation, Perception).
+  - **Gemini 2.5 Flash:** Primary processing (Reasoning, Simulation, Perception).
   - **Text Embeddings:** Gemini Embedding API.
 - **Database:** 
   - **PostgreSQL:** Persistent data storage.

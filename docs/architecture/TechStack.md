@@ -26,12 +26,12 @@ Tài liệu này xác định các công nghệ cụ thể được chọn để
 Dù Backend dùng TypeScript, các mô hình AI nặng vẫn được chạy dưới dạng các Microservices hoặc gọi qua API:
 
 ### 2.1. Perception & Router (Stage 1)
-- **Model:** **Gemini-1.5-Flash** (Cloud API) hoặc **Gemma-2b** (Local SLM).
+- **Model:** **Gemini-2.5-Flash** (Cloud API) hoặc **Gemma-2b** (Local SLM).
 - **Chiến lược:** Giai đoạn phát triển ưu tiên dùng Gemini API với System Prompt chuyên biệt để phân tích sentiment/intent nhằm tiết kiệm RAM.
 - **Hosting (Production):** Tự host qua **vLLM** hoặc **Ollama** nếu cần offline.
 
 ### 2.2. Unified Simulation Engine (Stage 3)
-- **Model:** **Gemini-1.5-Flash** (Cloud API).
+- **Model:** **Gemini-2.5-Flash** (Cloud API).
 - **Lý do:** Tốc độ nhanh, chi phí thấp, hỗ trợ Context Window lớn. Tích hợp trực tiếp qua SDK Google AI trên Node.js.
 - **Nhiệm vụ:** Sinh phản hồi thấu cảm dựa trên Context Budget 3000 tokens.
 
@@ -72,6 +72,6 @@ Dù Backend dùng TypeScript, các mô hình AI nặng vẫn được chạy dư
 Độ trễ dự kiến với Node.js / NestJS (Non-blocking I/O giúp xử lý đồng thời nhiều Stage tốt hơn):
 1. **Stage 1 (SLM Call):** ~200-400ms.
 2. **Stage 2 (Prisma + Redis):** ~40-80ms.
-3. **Stage 3 (Gemini Flash SDK):** ~800-1500ms.
+3. **Stage 3 (Gemini 2.5 Flash SDK):** ~800-1500ms.
 4. **Stage 4 (Node.js Logic):** ~50-100ms.
 - **Tổng cộng:** ~1.1s - 2.1s (Đạt mục tiêu < 3s).

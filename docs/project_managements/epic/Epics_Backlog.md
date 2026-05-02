@@ -13,7 +13,7 @@ Dự án được chia thành **9 Sprint** (Dự kiến 1 tuần/sprint cho MVP 
 | **[S1](../ticket/Sprint-01/)** | **EPIC-01** | Foundation & Real-time Gateway | Setup hạ tầng NestJS, Redis, PostgreSQL & Stage 0. |
 | **[S2](../ticket/Sprint-02/)** | **EPIC-02** | Perception & Routing | Triển khai Stage 1 (SLM Router) & Logic phân loại Intent/Sentiment. |
 | **[S3](../ticket/Sprint-03/)** | **EPIC-03** | Affective Memory & Security | Triển khai Stage 2, PGVector & Prisma Encryption Middleware. |
-| **[S4](../ticket/Sprint-04/)** | **EPIC-04** | The Brain (Simulation) | Hoàn thiện Stage 3 (Gemini Flash Single-pass). |
+| **[S4](../ticket/Sprint-04/)** | **EPIC-04** | The Brain (Simulation) | Hoàn thiện Stage 3 (Gemini 2.5 Flash Single-pass). |
 | **[S5](../ticket/Sprint-05/)** | **EPIC-05** | Safe Harbor Frontend | UI Web, Socket.io Streaming & Giao diện cảm xúc. |
 | **[S6](../ticket/Sprint-06/)** | **EPIC-06** | Safety & Monitoring | Stage 4 (Safety Shield, Vibe Monitor). |
 | **[S7](../ticket/Sprint-07/)** | **EPIC-07** | Offline Intelligence | Stage 5 (BullMQ), Memory Compression & Implicit Feedback. |
@@ -52,7 +52,7 @@ Dự án được chia thành **9 Sprint** (Dự kiến 1 tuần/sprint cho MVP 
 *   **Mô tả:** Triển khai "trái tim" của sự thấu cảm - Single-pass Simulation.
 *   **User Stories Key:**
     *   Là người dùng, tôi muốn nhận được phản hồi thấu cảm, tự nhiên và không rập khuôn.
-*   **Kết quả:** Tích hợp Gemini Flash SDK, hoàn thiện bộ System Prompt (ToM, Grice), phản hồi streaming mượt mà.
+*   **Kết quả:** Tích hợp Gemini 2.5 Flash SDK, hoàn thiện bộ System Prompt (ToM, Grice), phản hồi streaming mượt mà.
 *   **Chi tiết Ticket:** [Sprint-04 Tickets](../ticket/Sprint-04/)
 
 ### [[EPIC-05] Safe Harbor Frontend & Real-time Integration](EPIC-05_Safe_Harbor_Frontend.md)
