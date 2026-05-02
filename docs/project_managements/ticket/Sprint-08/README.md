@@ -9,6 +9,7 @@ Hoàn thiện logic tiến hóa mối quan hệ giữa người dùng và AI. Tr
 | :--- | :--- | :--- | :--- |
 | [T8.1](T8.1_Bonding_Service_Formula.md) | Bonding Service Formula | 🟢 Ready | P0 |
 | [T8.2](T8.2_Persona_Manager_DPE.md) | Persona Manager (DPE) | 🟢 Ready | P1 |
+| [T8.3](T8.3_Relationship_Milestone_Tier.md) | Relationship Milestone & Tier Logic | 🟢 Ready | P1 |
 | [T8.4](T8.4_Weekly_Bonding_Decay.md) | Weekly Bonding Decay | 🟢 Ready | P2 |
 | [T8.5](T8.5_Special_Date_Recognition.md) | Special Date Recognition | 🟢 Ready | P2 |
 | [T8.6](T8.6_Bonding_Growth_Dashboard.md) | Bonding Growth Dashboard | 🟢 Ready | P2 |

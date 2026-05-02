@@ -7,8 +7,8 @@ Thiết lập nền tảng kỹ thuật vững chắc cho hệ thống AmiSoul, 
 
 | ID | Tên Tác vụ | Trạng thái | Độ ưu tiên |
 | :--- | :--- | :--- | :--- |
-| [T1.1](T1.1_Init_Boilerplate_Docker.md) | Khởi tạo Boilerplate & Docker | 🟢 Ready | P0 |
-| [T1.2](T1.2_Prisma_Schema_Design.md) | Thiết kế Schema Prisma | 🟢 Ready | P0 |
+| [T1.1](T1.1_Init_Boilerplate_Docker.md) | Khởi tạo Boilerplate & Docker | ✅ Done | P0 |
+| [T1.2](T1.2_Prisma_Schema_Design.md) | Thiết kế Schema Prisma | ✅ Done | P0 |
 | [T1.3](T1.3_Socket_Gateway_JWT.md) | Xây dựng Socket Gateway | 🟢 Ready | P1 |
 | [T1.4](T1.4_Message_Aggregator_Service.md) | Triển khai MessageAggregatorService | 🟢 Ready | P1 |
 | [T1.5](T1.5_Timer_Debounce_Logic.md) | Logic Timer Debounce | 🟢 Ready | P1 |

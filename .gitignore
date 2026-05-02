@@ -44,3 +44,6 @@ Thumbs.db
 .claude/
 .antigravity/
 .agents/
+.kilo/
+
+/generated/prisma

@@ -8,31 +8,29 @@
 > Sparse is better than dense.
 > Readability counts.
 
-Dự án AmiSoul tuân thủ các tiêu chuẩn sau để đảm bảo sự thấu cảm và hiệu năng của hệ thống AI.
+The AmiSoul project adheres to the following standards to ensure empathy and performance in our AI systems.
 
 ---
 
-## 🏗️ Kiến trúc & Công nghệ
-- **ACE Engine v2.1:** Mọi xử lý hội thoại phải đi qua Stage 0-5.
-- **NestJS & TypeScript:** Sử dụng kiến trúc module hóa, dịch vụ hóa.
-- **Prisma & Postgres:** Schema-first, migrate bằng CLI, tuyệt đối không sửa DB bằng tay.
+## 🏛️ Core Principles
+- **Empathy First:** All behaviors and responses must aim to optimize emotional resonance (Vibe/Bonding).
+- **Transparency & Trust:** Always explain complex actions and strictly adhere to safety boundaries.
+- **Minimalism (Safe Harbor):** Design and solutions should provide a sense of calm, simplicity, and intimacy.
 
-## 📐 Quy trình Phát triển (Workflow)
-1. **Plan:** Luôn lập kế hoạch thực hiện trước khi viết code.
-2. **Code:** KISS, YAGNI, DRY. Giữ file < 200 dòng. Naming: `kebab-case`.
-3. **Test:** Phải chạy build/test thành công trước khi hoàn thành.
-4. **Git:** Sử dụng Conventional Commits (`feat`, `fix`, `docs`).
+## 🛡️ Safety & Security
+- **Secrets:** Never commit `.env` or API keys. Use environment variables.
+- **Data Integrity:** Always ask for user confirmation before performing destructive actions (`migrate reset`, `docker down -v`).
+- **Privacy:** Comply with all security and user privacy regulations.
 
-## 🛡️ An toàn & Bảo mật
-- **Secrets:** Không commit `.env` hoặc API keys. Sử dụng biến môi trường.
-- **Destructive:** Luôn hỏi ý kiến người dùng trước khi thực hiện các lệnh xóa dữ liệu (`migrate reset`, `docker down -v`).
-- **Privacy:** Tuân thủ các quy tắc bảo mật và quyền riêng tư của người dùng.
-
-## 📝 Quản lý Tài liệu
-- **Tickets:** Đồng bộ trạng thái ticket vào `Tickets_Status.md` sau mỗi task.
-- **Source of Truth:** Giữ `GEMINI.md` luôn cập nhật với trạng thái dự án.
+## 📝 Documentation & Workflow Management
+- **Source of Truth:** [GEMINI.md](./GEMINI.md) is the sole source of truth for project architecture and status.
+- **Strict Synchronization:** Every completed task MUST update the ticket checkboxes, Sprint README, Dashboard, and GEMINI.md (Refer to [orchestration.md](.agents/rules/orchestration.md)).
+- **Code Standards:** Refer to [.agents/rules/tech_standards.md](./.agents/rules/tech_standards.md).
+- **Workflow Orchestration:** Refer to [.agents/rules/orchestration.md](./.agents/rules/orchestration.md).
 
 ---
 
 > [!IMPORTANT]
-> Mọi chi tiết kỹ thuật sâu hơn, hãy tham khảo [GEMINI.md](./GEMINI.md).
+> For more technical details on the **ACE Engine (Stage 0-5)** and **Roadmap**, please refer to [GEMINI.md](./GEMINI.md).
+
+---
