@@ -16,6 +16,7 @@ describe('Stage0AggregatorService', () => {
     expire: jest.fn(),
     lrange: jest.fn(),
     del: jest.fn(),
+    get: jest.fn(),
   };
 
   const mockEventEmitter = {
@@ -111,5 +112,88 @@ describe('Stage0AggregatorService', () => {
     expect(eventEmitter.emit).toHaveBeenCalledWith('stage0.aggregated', expect.objectContaining({
       requiresSummarization: true,
     }));
+  });
+
+  describe('Preemption', () => {
+    it('should create AbortSignal when flushing', async () => {
+      mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
+      
+      await service.flushBuffer('user1', SessionType.PERSISTENT);
+      
+      expect(eventEmitter.emit).toHaveBeenCalledWith('stage0.aggregated', expect.objectContaining({
+        signal: expect.any(Object),
+      }));
+    });
+
+    it('should abort previous pipeline if new message arrives within limit', async () => {
+      // 1. Flush to start a pipeline
+      mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
+      await service.flushBuffer('user1', SessionType.PERSISTENT);
+      
+      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+      const abortSpy = jest.spyOn(signal, 'aborted', 'get');
+
+      // 2. New message arrives
+      mockRedisService.exists.mockResolvedValue(false);
+      mockRedisService.get.mockResolvedValue('normal'); // Normal vibe
+      
+      await service.aggregateMessage('user1', { content: 'new msg' }, SessionType.PERSISTENT);
+      
+      expect(signal.aborted).toBe(true);
+    });
+
+    it('should NOT abort if limiter is active and vibe is normal', async () => {
+      // 1. Flush to start a pipeline
+      mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
+      await service.flushBuffer('user1', SessionType.PERSISTENT);
+      
+      // Manually set preemptCount to 2
+      (service as any).preemptCounts.set('user1', 2);
+      
+      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+
+      // 2. New message arrives
+      mockRedisService.exists.mockResolvedValue(false);
+      mockRedisService.get.mockResolvedValue('normal');
+      
+      await service.aggregateMessage('user1', { content: 'new msg' }, SessionType.PERSISTENT);
+      
+      expect(signal.aborted).toBe(false);
+    });
+
+    it('should bypass limiter if vibe is extreme', async () => {
+      // 1. Flush to start a pipeline
+      mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
+      await service.flushBuffer('user1', SessionType.PERSISTENT);
+      
+      // Manually set preemptCount to 2
+      (service as any).preemptCounts.set('user1', 2);
+      
+      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+
+      // 2. New message arrives with extreme vibe
+      mockRedisService.exists.mockResolvedValue(false);
+      mockRedisService.get.mockResolvedValue('extreme');
+      
+      await service.aggregateMessage('user1', { content: 'new msg' }, SessionType.PERSISTENT);
+      
+      expect(signal.aborted).toBe(true);
+    });
+
+    it('should reset limiter on pipeline completion (success)', () => {
+      (service as any).preemptCounts.set('user1', 2);
+      
+      service.handlePipelineCompleted({ userId: 'user1', status: 'success' });
+      
+      expect((service as any).preemptCounts.get('user1')).toBe(0);
+    });
+
+    it('should NOT reset limiter on pipeline completion (aborted)', () => {
+      (service as any).preemptCounts.set('user1', 2);
+      
+      service.handlePipelineCompleted({ userId: 'user1', status: 'aborted' });
+      
+      expect((service as any).preemptCounts.get('user1')).toBe(2);
+    });
   });
 });

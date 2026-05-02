@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../../../redis/redis.service';
 import { MessageSentDto, SessionType } from '../../../chat/dto/message.dto';
 import { AggregatedMessageBlockDto } from './dto/aggregated-message-block.dto';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
 @Injectable()
 export class Stage0AggregatorService {
@@ -16,6 +16,8 @@ export class Stage0AggregatorService {
   
   private debounceTimers = new Map<string, NodeJS.Timeout>();
   private hardCapTimers = new Map<string, NodeJS.Timeout>();
+  private activeControllers = new Map<string, AbortController>();
+  private preemptCounts = new Map<string, number>();
 
   constructor(
     private readonly redisService: RedisService,
@@ -34,6 +36,9 @@ export class Stage0AggregatorService {
       timestamp: new Date().toISOString(),
     });
     const currentQueueLength = await this.redisService.rpush(bufferKey, messageItem);
+
+    // 1.5. Preemption Check: If a new message arrives, we might want to abort current pipeline
+    await this.handlePreemption(userId);
 
     // 2. Check if a debounce timer is already running
     const hasDebounce = await this.redisService.exists(debounceKey);
@@ -97,6 +102,10 @@ export class Stage0AggregatorService {
     await this.redisService.del(bufferKey);
     await this.redisService.del(debounceKey);
 
+    // Create AbortController for the new pipeline
+    const controller = new AbortController();
+    this.activeControllers.set(userId, controller);
+
     // 4. Join content and check for Wall of Text
     const fullContent = messages.map(m => m.content).join('\n');
     const estimatedTokens = fullContent.length / this.TOKEN_ESTIMATION_RATIO;
@@ -109,11 +118,57 @@ export class Stage0AggregatorService {
       fullContent,
       requiresSummarization,
       aggregatedAt: new Date().toISOString(),
+      signal: controller.signal,
     };
 
     this.logger.log(`Aggregated ${messages.length} messages for user: ${userId} [${sessionType}]`);
     
     // Emit event for Stage 1 to consume
     this.eventEmitter.emit('stage0.aggregated', aggregatedBlock);
+  }
+
+  private async handlePreemption(userId: string) {
+    const existingController = this.activeControllers.get(userId);
+    if (!existingController) return;
+
+    try {
+      // Get Vibe from Redis for bypass check
+      const vibe = await this.redisService.get(`vibe:${userId}`);
+      const isExtremeVibe = vibe === 'extreme';
+      
+      const count = this.preemptCounts.get(userId) || 0;
+
+      if (isExtremeVibe || count < 2) {
+        this.logger.log(`Preempting current pipeline for user: ${userId} (Count: ${count}, Vibe: ${vibe})`);
+        existingController.abort();
+        this.activeControllers.delete(userId);
+        this.preemptCounts.set(userId, count + 1);
+      } else {
+        this.logger.warn(`Preemption limiter active for user: ${userId}. Switching to Batch Mode.`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to fetch vibe for preemption check: ${error.message}`);
+      // Fallback: apply limiter without bypass if redis fails
+      const count = this.preemptCounts.get(userId) || 0;
+      if (count < 2) {
+        existingController.abort();
+        this.activeControllers.delete(userId);
+        this.preemptCounts.set(userId, count + 1);
+      }
+    }
+  }
+
+  @OnEvent('pipeline.completed')
+  handlePipelineCompleted(payload: { userId: string, status: string }) {
+    this.logger.debug(`Cleaning up pipeline resources for user: ${payload.userId} (Status: ${payload.status})`);
+    
+    // Always delete the controller
+    this.activeControllers.delete(payload.userId);
+    
+    // Only reset the preempt count if the pipeline actually finished (success or real failure)
+    // If it was aborted, we keep the count to enforce the limiter on the next message
+    if (payload.status !== 'aborted') {
+      this.preemptCounts.set(payload.userId, 0);
+    }
   }
 }

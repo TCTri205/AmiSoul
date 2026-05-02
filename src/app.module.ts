@@ -7,7 +7,7 @@ import { ChatModule } from './chat/chat.module';
 import { RedisModule } from './redis/redis.module';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { Stage0AggregatorModule } from './ace/stages/stage0-aggregator/stage0-aggregator.module';
+import { AceModule } from './ace/ace.module';
 
 @Module({
   imports: [
@@ -19,7 +19,7 @@ import { Stage0AggregatorModule } from './ace/stages/stage0-aggregator/stage0-ag
     RedisModule,
     AuthModule,
     ChatModule,
-    Stage0AggregatorModule,
+    AceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

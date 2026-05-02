@@ -10,4 +10,5 @@ export class AggregatedMessageBlockDto {
   fullContent: string;
   requiresSummarization: boolean;
   aggregatedAt: string;
+  signal?: AbortSignal;
 }
