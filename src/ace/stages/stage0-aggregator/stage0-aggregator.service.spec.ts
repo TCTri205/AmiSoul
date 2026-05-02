@@ -39,6 +39,7 @@ describe('Stage0AggregatorService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.useRealTimers();
     // Clear any pending timers
     (service as any).debounceTimers.forEach(clearTimeout);
     (service as any).hardCapTimers.forEach(clearTimeout);
@@ -55,7 +56,7 @@ describe('Stage0AggregatorService', () => {
     await service.aggregateMessage('user1', { content: 'hello' }, SessionType.PERSISTENT);
 
     expect(mockRedisService.rpush).toHaveBeenCalledWith('buffer:user1', expect.stringContaining('hello'));
-    expect(mockRedisService.set).toHaveBeenCalledWith('debounce:user1', 'active', 1500);
+    expect(mockRedisService.set).toHaveBeenCalledWith('debounce:user1', 'active', 2500);
     expect(mockRedisService.expire).toHaveBeenCalledWith('buffer:user1', 10000);
   });
 
@@ -64,7 +65,7 @@ describe('Stage0AggregatorService', () => {
     
     await service.aggregateMessage('user1', { content: 'world' }, SessionType.PERSISTENT);
 
-    expect(mockRedisService.expire).toHaveBeenCalledWith('debounce:user1', 1500);
+    expect(mockRedisService.expire).toHaveBeenCalledWith('debounce:user1', 2500);
   });
 
   it('should flush buffer and emit event', async () => {
@@ -85,7 +86,20 @@ describe('Stage0AggregatorService', () => {
         expect.objectContaining({ content: 'world' }),
       ]),
       fullContent: 'hello\nworld',
+      sessionType: SessionType.PERSISTENT,
       requiresSummarization: false,
+    }));
+  });
+
+  it('should respect Incognito session type', async () => {
+    mockRedisService.lrange.mockResolvedValue([
+      JSON.stringify({ content: 'secret', timestamp: '' }),
+    ]);
+
+    await service.flushBuffer('user1', SessionType.INCOGNITO);
+
+    expect(eventEmitter.emit).toHaveBeenCalledWith('stage0.aggregated', expect.objectContaining({
+      sessionType: SessionType.INCOGNITO,
     }));
   });
 
@@ -114,6 +128,51 @@ describe('Stage0AggregatorService', () => {
     }));
   });
 
+  it('should flush after 4s hard cap even if messages keep arriving', async () => {
+    jest.useFakeTimers();
+    mockRedisService.exists.mockResolvedValueOnce(false); // First message
+    mockRedisService.exists.mockResolvedValue(true); // Subsequent messages
+    mockRedisService.rpush.mockResolvedValue(1);
+    mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
+
+    const flushSpy = jest.spyOn(service, 'flushBuffer');
+
+    // 1. First message starts the hard cap
+    await service.aggregateMessage('user1', { content: 'msg 1' }, SessionType.PERSISTENT);
+    expect(flushSpy).not.toHaveBeenCalled();
+
+    // 2. Advance 2 seconds, send another message (resets debounce but NOT hard cap)
+    jest.advanceTimersByTime(2000);
+    await service.aggregateMessage('user1', { content: 'msg 2' }, SessionType.PERSISTENT);
+    expect(flushSpy).not.toHaveBeenCalled();
+
+    // 3. Advance another 2.1 seconds (total 4.1s)
+    jest.advanceTimersByTime(2100);
+    expect(flushSpy).toHaveBeenCalledWith('user1', SessionType.PERSISTENT);
+  });
+
+  it('should clear existing hard cap timer if redis debounce expired but local timer is active', async () => {
+    mockRedisService.exists.mockResolvedValue(false);
+    mockRedisService.rpush.mockResolvedValue(1);
+
+    // 1. Send first message (starts hard cap)
+    await service.aggregateMessage('user1', { content: 'm1' }, SessionType.PERSISTENT);
+    expect((service as any).hardCapTimers.has('user1')).toBe(true);
+
+    // 2. Simulate Redis debounce key expiring (exists = false)
+    // but we send another message. This should clear and restart the hard cap.
+    mockRedisService.exists.mockResolvedValue(false);
+    await service.aggregateMessage('user1', { content: 'm2' }, SessionType.PERSISTENT);
+    
+    expect(mockRedisService.set).toHaveBeenCalledTimes(2); // Debounce set twice
+  });
+
+  it('should do nothing if flushBuffer is called with empty buffer', async () => {
+    mockRedisService.lrange.mockResolvedValue([]);
+    await service.flushBuffer('user1', SessionType.PERSISTENT);
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
   describe('Preemption', () => {
     it('should create AbortSignal when flushing', async () => {
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
@@ -126,16 +185,13 @@ describe('Stage0AggregatorService', () => {
     });
 
     it('should abort previous pipeline if new message arrives within limit', async () => {
-      // 1. Flush to start a pipeline
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', SessionType.PERSISTENT);
       
       const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
-      const abortSpy = jest.spyOn(signal, 'aborted', 'get');
 
-      // 2. New message arrives
       mockRedisService.exists.mockResolvedValue(false);
-      mockRedisService.get.mockResolvedValue('normal'); // Normal vibe
+      mockRedisService.get.mockResolvedValue('normal');
       
       await service.aggregateMessage('user1', { content: 'new msg' }, SessionType.PERSISTENT);
       
@@ -143,16 +199,12 @@ describe('Stage0AggregatorService', () => {
     });
 
     it('should NOT abort if limiter is active and vibe is normal', async () => {
-      // 1. Flush to start a pipeline
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', SessionType.PERSISTENT);
       
-      // Manually set preemptCount to 2
       (service as any).preemptCounts.set('user1', 2);
-      
       const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
 
-      // 2. New message arrives
       mockRedisService.exists.mockResolvedValue(false);
       mockRedisService.get.mockResolvedValue('normal');
       
@@ -162,16 +214,12 @@ describe('Stage0AggregatorService', () => {
     });
 
     it('should bypass limiter if vibe is extreme', async () => {
-      // 1. Flush to start a pipeline
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', SessionType.PERSISTENT);
       
-      // Manually set preemptCount to 2
       (service as any).preemptCounts.set('user1', 2);
-      
       const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
 
-      // 2. New message arrives with extreme vibe
       mockRedisService.exists.mockResolvedValue(false);
       mockRedisService.get.mockResolvedValue('extreme');
       
@@ -180,19 +228,45 @@ describe('Stage0AggregatorService', () => {
       expect(signal.aborted).toBe(true);
     });
 
+    it('should handle redis failure during preemption check', async () => {
+      mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
+      await service.flushBuffer('user1', SessionType.PERSISTENT);
+      
+      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+
+      mockRedisService.exists.mockResolvedValue(false);
+      mockRedisService.get.mockRejectedValue(new Error('Redis down'));
+      
+      await service.aggregateMessage('user1', { content: 'new msg' }, SessionType.PERSISTENT);
+      
+      // Should still abort if count < 2
+      expect(signal.aborted).toBe(true);
+    });
+
+    it('should NOT abort during redis failure if limiter is reached', async () => {
+      mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
+      await service.flushBuffer('user1', SessionType.PERSISTENT);
+      
+      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+      (service as any).preemptCounts.set('user1', 2);
+
+      mockRedisService.exists.mockResolvedValue(false);
+      mockRedisService.get.mockRejectedValue(new Error('Redis down'));
+      
+      await service.aggregateMessage('user1', { content: 'new msg' }, SessionType.PERSISTENT);
+      
+      expect(signal.aborted).toBe(false);
+    });
+
     it('should reset limiter on pipeline completion (success)', () => {
       (service as any).preemptCounts.set('user1', 2);
-      
       service.handlePipelineCompleted({ userId: 'user1', status: 'success' });
-      
       expect((service as any).preemptCounts.get('user1')).toBe(0);
     });
 
     it('should NOT reset limiter on pipeline completion (aborted)', () => {
       (service as any).preemptCounts.set('user1', 2);
-      
       service.handlePipelineCompleted({ userId: 'user1', status: 'aborted' });
-      
       expect((service as any).preemptCounts.get('user1')).toBe(2);
     });
   });

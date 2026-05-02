@@ -7,7 +7,7 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 @Injectable()
 export class Stage0AggregatorService {
   private readonly logger = new Logger(Stage0AggregatorService.name);
-  private readonly DEBOUNCE_TIME = 1500; // 1.5s
+  private readonly DEBOUNCE_TIME = 2500; // 2.5s
   private readonly HARD_CAP_TIME = 4000; // 4s
   private readonly MAX_MESSAGES_PER_BLOCK = 10;
   private readonly SUMMARIZATION_THRESHOLD_TOKENS = 800;

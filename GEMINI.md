@@ -71,14 +71,16 @@ Every interaction in AmiSoul passes through a 6-stage processing flow:
 ## 📅 5. Roadmap & Status
 
 The project is divided into 9 Sprints. Current status:
-- **Status:** **Sprint-01 (Foundation & Aggregator)** — `🟡 In Progress`.
+- **Status:** **Sprint-01 (Foundation & Aggregator)** — `🔵 Completed`.
 - **Completed Tickets:**
   - [T1.1: Init Boilerplate NestJS](docs/project_managements/ticket/Sprint-01/T1.1_Init_Boilerplate_Docker.md)
   - [T1.2: Prisma Schema Design](docs/project_managements/ticket/Sprint-01/T1.2_Prisma_Schema_Design.md)
   - [T1.3: Socket Gateway & JWT](docs/project_managements/ticket/Sprint-01/T1.3_Socket_Gateway_JWT.md)
   - [T1.4: Message Aggregator Service](docs/project_managements/ticket/Sprint-01/T1.4_Message_Aggregator_Service.md)
   - [T1.5: Timer Debounce Logic](docs/project_managements/ticket/Sprint-01/T1.5_Timer_Debounce_Logic.md)
-- **Next Goal:** AbortSignal Preemption & Stage 0 Unit Testing.
+  - [T1.6: AbortSignal Preemption](docs/project_managements/ticket/Sprint-01/T1.6_AbortSignal_Preemption.md)
+  - [T1.7: Unit Test Aggregator](docs/project_managements/ticket/Sprint-01/T1.7_Unit_Test_Aggregator.md)
+- **Next Goal:** **Sprint-02 (Perception & Intelligent Routing)**.
 
 ---
 
