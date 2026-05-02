@@ -4,11 +4,11 @@
 Giám sát chất lượng và an toàn của phản hồi AI trước khi đến tay người dùng. EPIC này triển khai lớp phòng thủ cuối cùng (Monitor) để đảm bảo Ami luôn giữ đúng nhân vật, không vi phạm các quy tắc an toàn và cập nhật trạng thái cảm xúc phiên chat liên tục.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [x] **Safety Shield:** Kiểm tra nội dung độc hại, nhạy cảm hoặc vi phạm chính sách của Google Gemini.
-- [x] **Roleplay Guard:** Từ chối các yêu cầu bẻ lái nhân vật dựa trên mức độ thân thiết (Bonding Level).
-- [x] **Crisis Protocol:** Tự động chèn thông tin hỗ trợ/hotline nếu phát hiện người dùng có ý định tự hại.
-- [x] **Sentiment Accumulation:** Tính toán xu hướng cảm xúc của phiên chat để cập nhật `Session_Vibe`.
-- [x] **Parallel Check:** Thực hiện giám sát song song với streaming để không gây trễ cho người dùng.
+- [ ] **Safety Shield:** Kiểm tra nội dung độc hại, nhạy cảm hoặc vi phạm chính sách của Google Gemini.
+- [ ] **Roleplay Guard:** Từ chối các yêu cầu bẻ lái nhân vật dựa trên mức độ thân thiết (Bonding Level).
+- [ ] **Crisis Protocol:** Tự động chèn thông tin hỗ trợ/hotline nếu phát hiện người dùng có ý định tự hại.
+- [ ] **Sentiment Accumulation:** Tính toán xu hướng cảm xúc của phiên chat để cập nhật `Session_Vibe`.
+- [ ] **Parallel Check:** Thực hiện giám sát song song với streaming để không gây trễ cho người dùng.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T6.1: Monitor Service Parallel](../ticket/Sprint-06/T6.1_Monitor_Service_Parallel.md)**

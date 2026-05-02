@@ -51,7 +51,7 @@ graph LR
 
 ### 2.2. Stage 1 & 2: Nhận thức & Truy xuất
 - **Stage 1 (Router):** 
-    - Gọi Gemini Flash API để lấy JSON: `{intent, sentiment, complexity, urgency, identity_match}`.
+    - Gọi Gemini Flash API để lấy JSON: `{intent, sentiment, complexity, urgency, identity_anomaly}`.
     - **Summarization:** Nếu Message Block > 800 tokens, yêu cầu Gemini tóm tắt ngay trong cùng 1 lần gọi (Multi-task Prompt).
     - **Identity Check:** So sánh style nhắn tin với `Behavioral_Signature` trong Redis để phát hiện `Identity_Anomaly`.
 - **Stage 2 (Parallel):**
@@ -60,8 +60,10 @@ graph LR
 - **Merge Context:** Tổng hợp thành Prompt theo đúng tỷ lệ Budget (3000 tokens).
 
 ### 2.3. Stage 3 & 4: Giả lập & Giám sát
-- **Stage 3:** Stream phản hồi từ Gemini SDK về API Gateway để User thấy "đang trả lời" (Server-Sent Events hoặc Socket emit).
-- **Stage 4:** Kiểm tra Safety (Heuristic/Regex) và cập nhật `Session_Vibe` vào Redis.
+- **Stage 3:** Stream phản hồi từ Gemini SDK về API Gateway để User thấy "đang trả lời".
+- **Stage 4:** 
+    - Kiểm tra Safety (Heuristic/Regex) và cập nhật `Session_Vibe` vào Redis.
+    - **CAL Fast-track Sync:** Thực hiện trích xuất nhanh các kỳ vọng (Expectations) hoặc trạng thái dở dang (Pending States) từ phản hồi vừa sinh và ghi trực tiếp vào Redis L1 (TTL 24h) để tạo nhận thức tức thời cho các tin nhắn sau trong cùng phiên.
 
 ---
 
@@ -71,7 +73,7 @@ graph LR
 |---|---|---|
 | **Session Vibe** | Write-through to Redis. | Chỉ tồn tại trong Redis, xóa sau 30p inactivity. |
 | **Bonding Score** | Read via Prisma on session start -> Cache in Redis. | BullMQ Worker tính toán lại và ghi đè DB. |
-| **CAL (Expectations)**| Write to Redis (L1) immediately. | BullMQ dọn dẹp và lưu trữ bền vững (L2). |
+| **CAL (Expectations)**| Write to Redis (L1) via Stage 4/5. | BullMQ dọn dẹp và lưu trữ bền vững (L2). |
 | **CMA (Memories)** | Write to DB via BullMQ. | Dùng Indexing (HNSW) trong pgvector. |
 
 ---
@@ -108,3 +110,10 @@ Tiến trình này được xử lý bởi **BullMQ Workers** chạy tách biệ
 - **Bcrypt:** Băm mật khẩu và các thông tin định danh nhạy cảm.
 - **TLS 1.3:** Bắt buộc cho toàn bộ kết nối giữa App và Gateway.
 - **Data Anonymization:** Tự động loại bỏ thông tin PII (Personally Identifiable Information) trước khi đưa vào Stage 5 nén ký ức.
+
+---
+
+## 7. Tài liệu Tham chiếu
+- **[Đặc tả Yêu cầu (SRS)](./SRS.md)**
+- **[Lựa chọn Công nghệ (Tech Stack)](./TechStack.md)**
+- **[Thiết kế Hệ thống Hợp nhất (ACE Core Design)](./ACE_Core_Design.md)**

@@ -4,11 +4,11 @@
 Xây dựng giao diện người dùng (Safe Harbor) tối giản, ấm áp và mang lại cảm giác an toàn. EPIC này tập trung vào trải nghiệm người dùng phía Client (Web App), tích hợp luồng streaming tin nhắn thời gian thực và các hiệu ứng cảm xúc động.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [x] **Custom Theme:** Giao diện pastel, typography hiện đại (Inter/Outfit), hỗ trợ Dark Mode.
-- [x] **Real-time Streaming:** Hiển thị tin nhắn dạng stream (từng chữ) mượt mà qua Socket.io.
-- [x] **Vibe Background:** Nền ứng dụng thay đổi màu sắc (Gradient) dựa trên `Session_Vibe` của AI.
-- [x] **Haptic Feedback:** Giả lập rung hoặc hiệu ứng thị giác khi AI gửi các tin nhắn mang tính cảm xúc mạnh.
-- [x] **Local Persistence:** Lưu trữ tạm thời lịch sử chat tại trình duyệt để tránh gián đoạn khi mất mạng.
+- [ ] **Custom Theme:** Giao diện pastel, typography hiện đại (Inter/Outfit), hỗ trợ Dark Mode.
+- [ ] **Real-time Streaming:** Hiển thị tin nhắn dạng stream (từng chữ) mượt mà qua Socket.io.
+- [ ] **Vibe Background:** Nền ứng dụng thay đổi màu sắc (Gradient) dựa trên `Session_Vibe` của AI.
+- [ ] **Haptic Feedback:** Giả lập rung hoặc hiệu ứng thị giác khi AI gửi các tin nhắn mang tính cảm xúc mạnh.
+- [ ] **Local Persistence:** Lưu trữ tạm thời lịch sử chat tại trình duyệt để tránh gián đoạn khi mất mạng.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T5.1: Next.js Custom Theme](../ticket/Sprint-05/T5.1_Nextjs_Custom_Theme.md)**

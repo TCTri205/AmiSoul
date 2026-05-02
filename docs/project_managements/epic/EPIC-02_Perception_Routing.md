@@ -4,11 +4,11 @@
 Xây dựng khả năng "nhìn" và "hiểu" của AI đối với input thô từ người dùng. EPIC này tập trung vào Stage 1 của Pipeline, sử dụng các mô hình ngôn ngữ nhỏ (SLM) để phân tích ý định, cảm xúc và điều hướng luồng xử lý tối ưu, giúp giảm thiểu độ trễ và chi phí.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [x] **Perception Service:** Tích hợp thành công Gemini API để phân tích Text Block từ Stage 0.
-- [x] **Intelligent Routing:** Phân loại được 3 nhánh xử lý: Fast Path (Heuristic), Semi-Cognitive, và Full Cognitive Path.
-- [x] **Intent & Sentiment:** Trích xuất chính xác `intent`, `sentiment`, `complexity` và `urgency` (Crisis signals).
-- [x] **Identity Match:** So sánh văn phong tin nhắn hiện tại với `Behavioral_Signature` lưu trong Redis.
-- [x] **Late Night Recognition:** Nhận diện được các tin nhắn gửi trong khung giờ 23h-5h sáng để điều chỉnh Vibe.
+- [ ] **Perception Service:** Tích hợp thành công Gemini API để phân tích Text Block từ Stage 0.
+- [ ] **Intelligent Routing:** Phân loại được 3 nhánh xử lý: Fast Path (Heuristic), Semi-Cognitive, và Full Cognitive Path.
+- [ ] **Intent & Sentiment:** Trích xuất chính xác `intent`, `sentiment`, `complexity` và `urgency` (Crisis signals).
+- [ ] **Identity Match:** So sánh văn phong tin nhắn hiện tại với `Behavioral_Signature` lưu trong Redis.
+- [ ] **Late Night Recognition:** Nhận diện được các tin nhắn gửi trong khung giờ 23h-5h sáng để điều chỉnh Vibe.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T2.1: Perception Service Gemini](../ticket/Sprint-02/T2.1_Perception_Service_Gemini.md)**

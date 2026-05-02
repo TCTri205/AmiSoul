@@ -4,11 +4,13 @@
 Triển khai hệ thống xử lý tác vụ nền (Background Jobs) để củng cố tri thức và tối ưu hóa tài nguyên. EPIC này tập trung vào Stage 5 của Pipeline, thực hiện các công việc nặng sau khi phiên trò chuyện kết thúc mà không ảnh hưởng đến trải nghiệm thời gian thực.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [x] **BullMQ Infrastructure:** Hệ thống Queue hoạt động ổn định với Redis, có Dashboard giám sát.
-- [x] **Memory Compression:** Nén log chat thô thành các Episodic Nodes súc tích mang tính tự sự.
-- [x] **Conflict Resolution:** Tự động phát hiện và đánh dấu `Superseded` cho các ký ức cũ bị mâu thuẫn.
-- [x] **Knowledge Linking:** Liên kết các mẩu ký ức rời rạc thành một đồ thị tri thức đơn giản về người dùng.
-- [x] **Session Cleanup:** Tự động dọn dẹp các session rác và giải phóng tài nguyên định kỳ.
+- [ ] **BullMQ Infrastructure:** Hệ thống Queue hoạt động ổn định với Redis, có Dashboard giám sát.
+- [ ] **Memory Compression:** Nén log chat thô thành các Episodic Nodes súc tích mang tính tự sự.
+- [ ] **Conflict Resolution:** Tự động phát hiện và đánh dấu `Superseded` cho các ký ức cũ bị mâu thuẫn.
+- [ ] **Knowledge Linking:** Liên kết các mẩu ký ức rời rạc thành một đồ thị tri thức đơn giản về người dùng.
+- [ ] **Implicit Feedback Loop:** Phân tích các tín hiệu phản hồi ngầm để tinh chỉnh trọng số hệ thống.
+- [ ] **CAL State Management:** Chuyển đổi trạng thái CAL từ RAM (L1) sang Database (L2) bền vững.
+- [ ] **Session Cleanup:** Tự động dọn dẹp các session rác và giải phóng tài nguyên định kỳ.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T7.1: BullMQ Module Setup](../ticket/Sprint-07/T7.1_BullMQ_Module_Setup.md)**
@@ -18,6 +20,8 @@ Triển khai hệ thống xử lý tác vụ nền (Background Jobs) để củn
 - **[T7.5: Memory Conflict Resolution](../ticket/Sprint-07/T7.5_Memory_Conflict_Resolution.md)**
 - **[T7.6: Session Cleanup Scheduler](../ticket/Sprint-07/T7.6_Session_Cleanup_Scheduler.md)**
 - **[T7.7: Compression Worker Test](../ticket/Sprint-07/T7.7_Compression_Worker_Test.md)**
+- **[T7.8: Implicit Feedback Loop](../ticket/Sprint-07/T7.8_Implicit_Feedback_Loop.md)**
+- **[T7.9: CAL State Management](../ticket/Sprint-07/T7.9_CAL_State_Management.md)**
 
 ## 4. Rủi ro & Giảm thiểu (Risks & Mitigation)
 - **Rủi ro:** LLM tóm tắt làm mất các chi tiết quan trọng trong ký ức.

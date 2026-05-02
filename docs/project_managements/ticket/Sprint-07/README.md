@@ -15,6 +15,7 @@ Triển khai Stage 5 (Offline Consolidation) sử dụng BullMQ Workers. Thực 
 | [T7.6](T7.6_Session_Cleanup_Scheduler.md) | Session Cleanup Scheduler | 🟢 Ready | P2 |
 | [T7.7](T7.7_Compression_Worker_Test.md) | Compression Worker Test | 🟢 Ready | P2 |
 | [T7.8](T7.8_Implicit_Feedback_Loop.md) | Implicit Feedback Loop | 🟢 Ready | P1 |
+| [T7.9](T7.9_CAL_State_Management.md) | CAL State Management | 🟢 Ready | P1 |
 
 ## 🔗 Liên kết Hữu ích
 - **Epic gốc:** [[EPIC-07] Offline Intelligence](../epic/EPIC-07_Offline_Intelligence.md)

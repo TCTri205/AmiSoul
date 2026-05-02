@@ -4,11 +4,11 @@
 Triển khai "trái tim" của hệ thống - Simulation Service (Stage 3). EPIC này tập trung vào việc tạo ra các phản hồi thấu cảm, tự nhiên và mang đậm bản sắc cá nhân của Ami thông qua kỹ thuật Prompt Engineering nâng cao và mô hình Gemini 1.5 Flash.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [x] **Single-Pass Generation:** Tạo phản hồi bao gồm cả nội dung text và các metadata hành động/emoji trong một lượt gọi duy nhất.
-- [x] **Theory of Mind (ToM):** AI có khả năng suy luận về trạng thái tinh thần và mong muốn của người dùng.
-- [x] **XML System Prompt:** Sử dụng cấu trúc thẻ XML để phân tách rạch ròi các lớp quy tắc, ký ức và input của người dùng.
-- [x] **Token Budget Management:** Tự động cắt tỉa context để luôn nằm trong giới hạn 3000 tokens.
-- [x] **Boundary Isolation:** Ngăn chặn tuyệt đối việc người dùng ép AI phá vỡ nhân vật thông qua Prompt Injection.
+- [ ] **Single-Pass Generation:** Tạo phản hồi bao gồm cả nội dung text và các metadata hành động/emoji trong một lượt gọi duy nhất.
+- [ ] **Theory of Mind (ToM):** AI có khả năng suy luận về trạng thái tinh thần và mong muốn của người dùng.
+- [ ] **XML System Prompt:** Sử dụng cấu trúc thẻ XML để phân tách rạch ròi các lớp quy tắc, ký ức và input của người dùng.
+- [ ] **Token Budget Management:** Tự động cắt tỉa context để luôn nằm trong giới hạn 3000 tokens.
+- [ ] **Boundary Isolation:** Ngăn chặn tuyệt đối việc người dùng ép AI phá vỡ nhân vật thông qua Prompt Injection.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T4.1: Simulation Service Gemini](../ticket/Sprint-04/T4.1_Simulation_Service_Gemini.md)**

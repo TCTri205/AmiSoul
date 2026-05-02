@@ -4,13 +4,13 @@
 Thiết lập nền tảng kỹ thuật cho dự án AmiSoul và triển khai lớp tiền xử lý tin nhắn (Stage 0). Epic này đảm bảo hệ thống có "xương sống" vững chắc để xử lý luồng dữ liệu thời gian thực (Real-time Pipeline) mà không làm quá tải các mô hình AI phía sau, đồng thời thiết lập môi trường phát triển tối ưu.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [x] Khởi tạo thành công dự án NestJS với TypeScript, ESLint, Prettier.
-- [x] Thiết lập Docker Compose chạy PostgreSQL (với pgvector) và Redis.
-- [x] Cấu hình Prisma kết nối thành công đến PostgreSQL.
-- [x] Triển khai Socket.io Gateway hỗ trợ giao tiếp song hướng (Bi-directional).
-- [x] **Stage 0: Debounce & Buffer:** Gom tin nhắn trong cửa sổ 1.5 - 2s (Soft Cap) đến tối đa 4s/10 tin (Hard Cap) vào Redis.
-- [x] **Stage 0: Preemption (Hủy ngang):** Sử dụng `AbortController` để dừng Pipeline cũ khi có tin nhắn mới tràn vào Buffer.
-- [x] Xử lý các sự kiện cơ bản: `message_sent`, `message_deleted`, `message_reaction` với độ trễ gateway < 50ms.
+- [ ] Khởi tạo thành công dự án NestJS với TypeScript, ESLint, Prettier.
+- [ ] Thiết lập Docker Compose chạy PostgreSQL (với pgvector) và Redis.
+- [ ] Cấu hình Prisma kết nối thành công đến PostgreSQL.
+- [ ] Triển khai Socket.io Gateway hỗ trợ giao tiếp song hướng (Bi-directional).
+- [ ] **Stage 0: Debounce & Buffer:** Gom tin nhắn trong cửa sổ 1.5 - 2s (Soft Cap) đến tối đa 4s/10 tin (Hard Cap) vào Redis.
+- [ ] **Stage 0: Preemption (Hủy ngang):** Sử dụng `AbortController` để dừng Pipeline cũ khi có tin nhắn mới tràn vào Buffer.
+- [ ] Xử lý các sự kiện cơ bản: `message_sent`, `message_deleted`, `message_reaction` với độ trễ gateway < 50ms.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T1.1: Khởi tạo Boilerplate & Docker](../ticket/Sprint-01/T1.1_Init_Boilerplate_Docker.md)**

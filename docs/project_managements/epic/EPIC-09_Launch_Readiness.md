@@ -4,16 +4,16 @@
 Đảm bảo hệ thống đạt tiêu chuẩn sản xuất (Production-ready). EPIC này tập trung vào việc tối ưu hóa hiệu suất, bảo mật dữ liệu, thiết lập quy trình vận hành (Ops) và triển khai tự động (CI/CD) để sẵn sàng cho việc phát hành MVP.
 
 ## 2. Tiêu chí Chấp nhận (Acceptance Criteria)
-- [x] **Latency Optimization:** Đạt mục tiêu độ trễ E2E < 3.5s cho Fast Path và < 6s cho Full Path.
-- [x] **Load Testing:** Hệ thống chịu tải được 1000 người dùng đồng thời (CCU).
-- [x] **Data Security:** Toàn bộ tin nhắn và ký ức được mã hóa AES-256-GCM ở mức Database.
-- [x] **CI/CD Pipeline:** Tự động Build, Test và Deploy khi có code mới lên nhánh `master`.
-- [x] **Operation Manual:** Hoàn thiện tài liệu hướng dẫn vận hành, backup và recovery dữ liệu.
+- [ ] **Latency Optimization:** Đạt mục tiêu độ trễ E2E < 3.5s cho Fast Path và < 6s cho Full Path.
+- [ ] **Load Testing:** Hệ thống chịu tải được 1000 người dùng đồng thời (CCU).
+- [ ] **Data Security:** Toàn bộ tin nhắn và ký ức được mã hóa AES-256-GCM ở mức Database.
+- [ ] **CI/CD Pipeline:** Tự động Build, Test và Deploy khi có code mới lên nhánh `master`.
+- [ ] **Operation Manual:** Hoàn thiện tài liệu hướng dẫn vận hành, backup và recovery dữ liệu.
 
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T9.1: Load Test Scenarios](../ticket/Sprint-09/T9.1_Load_Test_Scenarios.md)**
 - **[T9.2: DB Indexing & Tuning](../ticket/Sprint-09/T9.2_DB_Indexing_HNSW_Tuning.md)**
-- **[T9.3: Prisma Encryption](../ticket/Sprint-09/T9.3_Prisma_Encryption_Middleware.md)**
+- **[T9.3: Prometheus & Grafana Monitoring](../ticket/Sprint-09/T9.3_Prometheus_Grafana_Monitoring.md)**
 - **[T9.4: Centralized Logging](../ticket/Sprint-09/T9.4_Centralized_Logging_Winston.md)**
 - **[T9.5: GitHub Actions CI/CD](../ticket/Sprint-09/T9.5_Github_Actions_CICD.md)**
 - **[T9.6: Internal Security Audit](../ticket/Sprint-09/T9.6_Internal_Security_Audit.md)**

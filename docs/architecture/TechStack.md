@@ -59,6 +59,8 @@ Dù Backend dùng TypeScript, các mô hình AI nặng vẫn được chạy dư
 
 - **Runtime:** **Node.js (LTS)**.
 - **Containerization:** **Docker & Docker Compose**.
+    - **Local Dev (Hybrid Strategy):** Chỉ chạy Database (PostgreSQL) và Cache (Redis) trong Docker. Ứng dụng NestJS chạy trực tiếp trên máy local (`npm run dev`) để tiết kiệm RAM, CPU và giảm thời gian build.
+    - **Production:** Toàn bộ hệ thống được container hóa hoàn toàn để đảm bảo tính nhất quán.
 - **API Gateway:** **Nginx** xử lý SSL và Load Balancing.
 - **Monitoring:** **Prometheus & Grafana** tích hợp với NestJS qua Prometheus module (exporter).
 - **Logging:** **Winston / Pino** để ghi log có cấu trúc.

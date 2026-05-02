@@ -9,6 +9,7 @@
 | :--- | :--- | :--- | :--- |
 | [T9.1](T9.1_Load_Test_Scenarios.md) | Load Test Scenarios | 🟢 Ready | P0 |
 | [T9.2](T9.2_DB_Indexing_HNSW_Tuning.md) | DB Indexing & HNSW Tuning | 🟢 Ready | P0 |
+| [T9.3](T9.3_Prometheus_Grafana_Monitoring.md) | Prometheus & Grafana Monitoring | 🟢 Ready | P1 |
 | [T9.4](T9.4_Centralized_Logging_Winston.md) | Centralized Logging (Winston) | 🟢 Ready | P1 |
 | [T9.5](T9.5_Github_Actions_CICD.md) | GitHub Actions CI/CD | 🟢 Ready | P1 |
 | [T9.6](T9.6_Internal_Security_Audit.md) | Internal Security Audit | 🟢 Ready | P1 |

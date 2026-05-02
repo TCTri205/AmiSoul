@@ -26,6 +26,7 @@ Tài liệu này xác định các mục tiêu chức năng, phi chức năng, t
 ### 2.3. Tương tác Chủ động (FR-03)
 - **FR-03.1:** Cho phép các tương tác nhận biết ngữ cảnh dựa trên thói quen hoặc hoạt động của người dùng.
 - **FR-03.2:** Các mô thức tương tác phải xem xét ngữ cảnh thời gian (ví dụ: thời điểm trong ngày).
+- **FR-03.3:** Đảm bảo tính nhận thức tức thời (Intra-session Awareness) đối với các sự kiện vừa được đề cập trong cùng một buổi hội thoại.
 
 ### 2.4. Quản lý An toàn & Khủng hoảng (FR-04)
 - **FR-04.1:** Giám sát thời gian thực các chỉ số tâm lý tiêu cực cực đoan hoặc ý định tự hại qua bộ lọc từ khóa và phân tích cảm xúc (Urgency Score).

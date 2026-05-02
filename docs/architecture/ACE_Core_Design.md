@@ -45,6 +45,9 @@ graph TD
     S2 --> M1[Stage 4: Vibe & Safety Monitor]
     M1 --> Output([AmiSoul phản hồi])
     
+    %% Luồng Fast-track (Nhận thức tức thời)
+    M1 -.->|CAL Fast-track Sync| Cache
+    
     %% Vòng lặp Offline (Stage 5)
     Output -->|Log tích lũy| O1[Stage 5: Offline Consolidation]
     O1 --> |Cập nhật DPE & Bonding| R1
@@ -160,10 +163,14 @@ graph TD
     
     Kết hợp với `Injection_Flag` từ Stage 1, đây là hàng rào kép chống Prompt Injection.
 
-### 2.4. Stage 4: Vibe & Safety Monitor (Tầng Giám sát)
+### 2.4. Stage 4: Vibe & Safety Monitor (Tầng Giám sát & Nhận thức tức thời)
 - **Core Persona Shield:** Đảm bảo AmiSoul giữ đúng bản sắc cốt lõi.
 - **Roleplay, Persona Override & Injection Handling:** Nếu user cố ép AI đóng vai ("Bây giờ mày là...") **hoặc** Stage 1 chuyển đến với `Injection_Flag: True`, Stage 4 kích hoạt phản hồi từ chối khéo léo dựa trên Bonding Level (Bạn thân thì từ chối hài hước, Người lạ thì từ chối lịch sự) — tuyệt đối không tiết lộ thông tin nội bộ hay phá vỡ nhân vật.
-- Cập nhật biến `Session_Vibe` mới vào RAM Cache.
+- **Cập nhật Session_Vibe:** Lưu mood mới vào RAM Cache.
+- **CAL Fast-track Sync (Nhận thức nội phiên):** 
+    - Sau khi phản hồi được gửi đi, Stage 4 thực hiện một tiến trình hậu xử lý (Post-process) nhẹ nhàng.
+    - Trích xuất các thực thể CAL (Expectations, Pending States) tiềm năng từ hội thoại vừa diễn ra (Vd: *"Hẹn gặp bạn lúc 3h"*) và cập nhật **ngay lập tức** vào Redis L1.
+    - Điều này cho phép AI nhận diện được sự kiện ngay trong tin nhắn tiếp theo của cùng một phiên.
 
 ---
 
@@ -221,7 +228,7 @@ CAL là bộ nhớ phụ lưu trữ các sự kiện gắn với thời gian và
 - **Cấu trúc Lưu trữ (Hybrid Storage):**
     - **L1 (RAM Cache):** Chứa dữ liệu Active (Expectations, Pending States) của session hiện tại để truy xuất < 50ms. Tích hợp chính sách **LRU Eviction** (giới hạn ~50 items) và **Periodic Sync** mỗi 15 phút để tránh memory leak và staleness.
     - **L2 (Database):** Lưu trữ bền vững tất cả sự kiện. Dữ liệu được load từ L2 vào L1 khi Session Resume (sau >30p offline).
-- **Cơ chế Hoạt động:** CAL được trích xuất ở Stage 5, và kiểm tra ở Stage 1 (CAL Check).
+- **Cơ chế Hoạt động:** CAL được trích xuất chính thức ở Stage 5, kiểm tra ở Stage 1 (CAL Check), và có cơ chế cập nhật nhanh (Fast-track) tại Stage 4 để đảm bảo tính nhất quán nội phiên.
 
 ### 5.1. Mô hình Hành vi (Behavioral Baseline) & Hành vi Lệch chuẩn
 - **Dữ liệu:** `Typical_Active_Hours`, `Avg_Messages_Per_Session`, `Avg_Session_Frequency`.
@@ -300,9 +307,9 @@ Nhằm ngăn chặn lạm dụng và quản lý chi phí API (đặc biệt là 
 Áp dụng cho người dùng mới hoàn toàn (Bonding = 0, CMA và DPE rỗng).
 
 ### 8.1. Giai đoạn Onboarding (3 Phiên đầu tiên)
-- **Phiên 1:** Dùng Default Persona Template (ấm áp, trung tính). Bỏ qua hoàn toàn Stage 2 (Retrieval).
-- **Phiên 2:** Bắt đầu có CMA. DPE khởi tạo sơ bộ.
-- **Phiên 3+:** Hoạt động đầy đủ. Thoát Onboarding Mode.
+- **Phiên 1:** Dùng Default Persona Template (ấm áp, trung tính). Bỏ qua hoàn toàn Stage 2 (Retrieval) và **Identity Anomaly Check** (do chưa có baseline).
+- **Phiên 2:** Bắt đầu có CMA. DPE khởi tạo sơ bộ. Vẫn bỏ qua Identity Check.
+- **Phiên 3+:** Hoạt động đầy đủ. Thoát Onboarding Mode. Bắt đầu so sánh Behavioral Signature để phát hiện Identity Anomaly.
 
 ### 8.2. Tối ưu Token Budget cho Cold Start
 Do không có Memory (0 tokens cho CMA), dung lượng được tự động phân bổ thêm cho Conversation History (dựa trên cơ chế Dynamic Token Allocation ở Stage 3) và System Prompt chứa hướng dẫn Onboarding chi tiết hơn.
@@ -328,8 +335,8 @@ Thay vì chuỗi tĩnh cứng nhắc, các câu chào ở Fast Path được sin
 | `Manipulation_Score`| Trạng thái Session | Stage 1 | Per Session | Tích lũy dấu hiệu thao túng, cảnh báo Monitor |
 | `Session_Vibe` | RAM Cache | Stage 4 | Per Message | Giữ mood tức thời (Reset sau 30p) |
 | `Bonding_Score` | Database | Stage 5 | Per Session | Độ thân thiết dài hạn (0-100) |
-| `Active_Expectations`| RAM Cache (CAL) | Stage 1/5 | Hết hạn sau 24h+12h | Theo dõi sự kiện sắp diễn ra |
-| `Pending_States` | RAM Cache (CAL) | Stage 1/5 | Hết hạn sau 72h | Khơi gợi câu chuyện dở dang |
+| `Active_Expectations`| RAM Cache (CAL) | Stage 4/5 | Hết hạn sau 24h+12h | Theo dõi sự kiện sắp diễn ra |
+| `Pending_States` | RAM Cache (CAL) | Stage 4/5 | Hết hạn sau 72h | Khơi gợi câu chuyện dở dang |
 | `Behavioral_Baseline`| Database → CAL | Stage 5 | Weekly | Phát hiện lệch múi giờ/tần suất nhắn |
 | `Behavioral_Signature`| RAM Cache (CAL L1)| Stage 5 | Per Session | Fingerprint thói quen để check Identity Anomaly |
 | `Injection_Flag` | Trạng thái Request | Stage 1 | Per Message | Kích hoạt Rejection Prompt tại Stage 3 |
