@@ -1,38 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
 import { Stage1PerceptionService } from './stage1-perception.service';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { SessionType } from '../../../chat/dto/message.dto';
 import { CrisisService } from './crisis.service';
 import { InjectionDetectionService } from './injection-detection.service';
-
-// Mocking GoogleGenerativeAI
-const mockModel = {
-  generateContent: jest.fn(),
-};
-
-jest.mock('@google/generative-ai', () => ({
-  GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
-    getGenerativeModel: jest.fn().mockReturnValue(mockModel),
-  })),
-}));
+import { LlmOrchestrator } from '../../../ai-provider/llm-orchestrator.service';
 
 describe('Stage1PerceptionService', () => {
   let service: Stage1PerceptionService;
+  let orchestrator: jest.Mocked<LlmOrchestrator>;
 
   beforeEach(async () => {
+    const orchestratorMock = {
+      generate: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         Stage1PerceptionService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'GEMINI_API_KEY') return 'test-api-key';
-              return null;
-            }),
-          },
-        },
+        { provide: LlmOrchestrator, useValue: orchestratorMock },
         {
           provide: CrisisService,
           useValue: {
@@ -50,18 +36,7 @@ describe('Stage1PerceptionService', () => {
     }).compile();
 
     service = module.get<Stage1PerceptionService>(Stage1PerceptionService);
-    
-    // Initialize the service manually
-    service.onModuleInit();
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-    mockModel.generateContent.mockReset();
-    // Close the breaker after each test to avoid state leakage
-    if ((service as any).breaker) {
-      (service as any).breaker.close();
-    }
+    orchestrator = module.get(LlmOrchestrator);
   });
 
   it('should be defined', () => {
@@ -92,20 +67,20 @@ describe('Stage1PerceptionService', () => {
         noise_flag: false,
       };
 
-      mockModel.generateContent.mockResolvedValue({
-        response: {
-          text: () => JSON.stringify(mockResult),
-        },
+      orchestrator.generate.mockResolvedValue({
+        text: JSON.stringify(mockResult),
+        provider: 'groq',
+        model: 'llama3',
       });
 
       const result = await service.process(payload);
 
       expect(result.perception).toEqual({ ...mockResult, is_crisis: false, is_injection: false });
-      expect(mockModel.generateContent).toHaveBeenCalled();
+      expect(orchestrator.generate).toHaveBeenCalled();
     });
 
-    it('should return fallback results on Gemini API failure', async () => {
-      mockModel.generateContent.mockRejectedValue(new Error('API Error'));
+    it('should return fallback results on Orchestrator failure', async () => {
+      orchestrator.generate.mockRejectedValue(new Error('LLM Failure'));
 
       const result = await service.process(payload);
 
@@ -122,60 +97,6 @@ describe('Stage1PerceptionService', () => {
         is_crisis: false,
         is_injection: false,
       });
-    });
-
-    it('should retry up to 3 times on transient failure', async () => {
-      mockModel.generateContent
-        .mockRejectedValueOnce(new Error('Transient Error'))
-        .mockRejectedValueOnce(new Error('Transient Error'))
-        .mockResolvedValue({
-          response: {
-            text: () => JSON.stringify({
-              intent: 'greeting',
-              sentiment: 'neutral',
-              complexity: 1,
-              urgency: 1,
-              identity_anomaly: false,
-              routing_confidence: 0.9,
-              sarcasm_hint: false,
-              timestamp_flag: false,
-              noise_flag: false
-            }),
-          },
-        });
-
-      const result = await service.process(payload);
-
-      expect(result.perception.intent).toBe('greeting');
-      expect(mockModel.generateContent).toHaveBeenCalledTimes(3);
-    });
-
-    it('should respect AbortSignal', async () => {
-      const controller = new AbortController();
-      controller.abort();
-
-      await expect(service.process(payload, controller.signal))
-        .rejects.toThrow('AbortError');
-    });
-
-    it('should open circuit breaker on multiple failures', async () => {
-      // Force failure to trigger circuit breaker
-      mockModel.generateContent.mockRejectedValue(new Error('Persistent Error'));
-
-      // Fire multiple times to trigger circuit breaker (default threshold 50%)
-      for (let i = 0; i < 15; i++) {
-        await service.process(payload);
-      }
-
-      expect((service as any).breaker.opened).toBe(true);
-      
-      // Subsequent call should fail fast without calling generateContent
-      mockModel.generateContent.mockClear();
-      const result = await service.process(payload);
-      
-      expect(mockModel.generateContent).not.toHaveBeenCalled();
-      // Should still return fallback even when circuit is open
-      expect(result.perception.intent).toBe('unknown');
     });
 
     it('should flag crisis and set max urgency when CrisisService returns true', async () => {
@@ -195,16 +116,29 @@ describe('Stage1PerceptionService', () => {
         noise_flag: false,
       };
 
-      mockModel.generateContent.mockResolvedValue({
-        response: {
-          text: () => JSON.stringify(mockResult),
-        },
+      orchestrator.generate.mockResolvedValue({
+        text: JSON.stringify(mockResult),
+        provider: 'groq',
+        model: 'llama3',
       });
 
       const result = await service.process(crisisPayload);
 
       expect(result.perception.is_crisis).toBe(true);
       expect(result.perception.urgency).toBe(10);
+    });
+
+    it('should respect AbortSignal', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      orchestrator.generate.mockImplementation(async (req) => {
+        if (req.signal?.aborted) throw new Error('AbortError');
+        return { text: 'ok', provider: 'p', model: 'm' };
+      });
+
+      await expect(service.process(payload, controller.signal))
+        .rejects.toThrow('AbortError');
     });
   });
 });

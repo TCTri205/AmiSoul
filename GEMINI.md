@@ -75,7 +75,7 @@ The project is divided into 9 Sprints. Current status:
 - **Status:** **Sprint-03 (Affective Memory & Security)** — `🔵 In Progress`.
 - **Completed Tickets:**
   - [T1.1 - T1.7: Sprint-01 Foundation](docs/project_managements/ticket/Sprint-01/README.md) — `✅ Completed`.
-  - [T2.1 - T2.8: Sprint-02 Perception & Routing](docs/project_managements/ticket/Sprint-02/README.md) — `🔵 In Progress` (T2.8 adding multi-model support).
+  - [T2.1 - T2.8: Sprint-02 Perception & Routing](docs/project_managements/ticket/Sprint-02/README.md) — `✅ Completed`.
 - **Next Goal:** [T3.1: Prisma Vector Query](docs/project_managements/ticket/Sprint-03/T3.1_Prisma_Vector_Query.md).
 
 ---

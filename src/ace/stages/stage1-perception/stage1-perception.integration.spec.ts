@@ -5,6 +5,7 @@ import { CrisisService } from './crisis.service';
 import { InjectionDetectionService } from './injection-detection.service';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { SessionType } from '../../../chat/dto/message.dto';
+import { AiProviderModule } from '../../../ai-provider/ai-provider.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -25,6 +26,7 @@ describe('Stage1PerceptionService (Integration)', () => {
           isGlobal: true,
           envFilePath: '.env',
         }),
+        AiProviderModule,
       ],
       providers: [
         Stage1PerceptionService,
@@ -34,7 +36,8 @@ describe('Stage1PerceptionService (Integration)', () => {
     }).compile();
 
     service = module.get<Stage1PerceptionService>(Stage1PerceptionService);
-    service.onModuleInit();
+    // Trigger module init to setup circuit breakers
+    await module.init();
   });
 
   it('should evaluate the dataset with high accuracy', async () => {
