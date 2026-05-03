@@ -69,7 +69,7 @@ describe('SimulationService', () => {
     }));
   });
 
-  it('should handle AbortSignal (T4.7)', async () => {
+  it('should handle AbortSignal properly (T4.7)', async () => {
     const controller = new AbortController();
     const streamSubject = new Subject<any>();
     orchestrator.generateStream.mockReturnValue(streamSubject.asObservable());
@@ -82,18 +82,43 @@ describe('SimulationService', () => {
 
     const simulationPromise = service.simulate(mockContext, {}, controller.signal);
 
+    // Stream starts
     streamSubject.next({ text: 'Starting...', isComplete: false });
-    expect(eventEmitter.emit).toHaveBeenCalledWith('simulation.chunk', expect.any(Object));
+    expect(eventEmitter.emit).toHaveBeenCalledWith('simulation.chunk', expect.objectContaining({
+      chunk: 'Starting...'
+    }));
 
-    // Abort
+    // Abort immediately
     controller.abort();
-    streamSubject.error({ name: 'AbortError' });
+    const abortError = new Error('AbortError');
+    abortError.name = 'AbortError';
+    streamSubject.error(abortError);
 
-    await simulationPromise;
+    // Should reject with AbortError
+    await expect(simulationPromise).rejects.toThrow('AbortError');
 
-    // completed should NOT have been called
+    // No completion or error events after abort (from the service's own error handler)
     const completedCalls = eventEmitter.emit.mock.calls.filter(call => call[0] === 'simulation.completed');
     expect(completedCalls.length).toBe(0);
+    
+    // simulation.error is only called for NON-abort errors
+    const errorCalls = eventEmitter.emit.mock.calls.filter(call => call[0] === 'simulation.error');
+    expect(errorCalls.length).toBe(0);
+
+    // No Redis persistence (history)
+    expect(redisService.rpush).not.toHaveBeenCalled();
+
+    // Verify signal was forwarded to orchestrator
+    expect(orchestrator.generateStream).toHaveBeenCalledWith(
+      expect.objectContaining({ signal: controller.signal })
+    );
+
+    // Extra chunks after abort should be dropped (guard in next)
+    streamSubject.next({ text: 'This should not appear', isComplete: false });
+    const chunkCallsAfterAbort = eventEmitter.emit.mock.calls.filter(
+      call => call[0] === 'simulation.chunk' && call[1].chunk === 'This should not appear'
+    );
+    expect(chunkCallsAfterAbort.length).toBe(0);
   });
 
   it('should trigger self-correction on safety violation and complete the pipeline (T4.5)', async () => {

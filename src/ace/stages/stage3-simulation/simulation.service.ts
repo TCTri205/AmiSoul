@@ -62,7 +62,7 @@ export class SimulationService {
       let subscription: any;
       subscription = this.llmOrchestrator.generateStream(llmRequest).subscribe({
         next: (chunk) => {
-          if (isSafetyTriggered) return;
+          if (isSafetyTriggered || signal?.aborted) return;
 
           fullResponse += chunk.text;
           actualProvider = chunk.provider || actualProvider;
@@ -95,7 +95,8 @@ export class SimulationService {
         error: (err) => {
           if (err.name === 'AbortError' || signal?.aborted) {
             this.logger.warn(`Simulation stream aborted for user ${userId}`);
-            resolve();
+            if (subscription) subscription.unsubscribe();
+            reject(err);
             return;
           }
           this.logger.error(`Simulation stream error for user ${userId}: ${err.message}`);
