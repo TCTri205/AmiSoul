@@ -1,11 +1,19 @@
 import { create } from 'zustand';
 import { Message } from '@/types/message';
 
+export type TypingState = 'none' | 'initial' | 'thinking' | 'error';
+
 interface ChatState {
   messages: Message[];
   isStreaming: boolean;
-  isTyping: boolean;
+  typingState: TypingState;
   streamingChunks: Record<string, string>;
+  replyToMessage: Message | null;
+  
+  // Timeout tracking
+  lastChunkTimestamp: number | null;
+  typingTimeoutId: NodeJS.Timeout | null;
+  errorTimeoutId: NodeJS.Timeout | null;
   
   // Actions
   addMessage: (message: Message) => void;
@@ -14,15 +22,25 @@ interface ChatState {
   appendChunk: (messageId: string, chunk: string) => void;
   finalizeStream: (messageId: string) => void;
   setStreaming: (isStreaming: boolean) => void;
-  setTyping: (isTyping: boolean) => void;
+  setTypingState: (state: TypingState) => void;
+  setReplyToMessage: (message: Message | null) => void;
   clearStreamingChunks: (messageId?: string) => void;
-  }
+  
+  // Timeout Actions
+  startTypingTimeout: () => void;
+  clearTypingTimeouts: () => void;
+  resetStreaming: () => void;
+}
 
-  export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isStreaming: false,
-  isTyping: false,
+  typingState: 'none',
   streamingChunks: {},
+  replyToMessage: null,
+  lastChunkTimestamp: null,
+  typingTimeoutId: null,
+  errorTimeoutId: null,
 
   addMessage: (message) => 
     set((state) => ({ 
@@ -43,19 +61,29 @@ interface ChatState {
       messages: state.messages.map((m) => (m.id === id ? { ...m, status } : m)),
     })),
 
+  appendChunk: (messageId, chunk) => {
+    const { clearTypingTimeouts, startTypingTimeout } = get();
+    clearTypingTimeouts();
+    // Restart timeout on every chunk to detect if stream stalls
+    startTypingTimeout();
 
-  appendChunk: (messageId, chunk) =>
     set((state) => ({
+      lastChunkTimestamp: Date.now(),
+      typingState: 'none',
       streamingChunks: {
         ...state.streamingChunks,
         [messageId]: (state.streamingChunks[messageId] || '') + chunk,
       },
-    })),
+    }));
+  },
 
-  finalizeStream: (messageId) =>
+  finalizeStream: (messageId) => {
+    const { clearTypingTimeouts } = get();
+    clearTypingTimeouts();
+
     set((state) => {
       const content = state.streamingChunks[messageId];
-      if (!content) return state;
+      if (!content) return { ...state, isStreaming: false, typingState: 'none' };
 
       const newMessage: Message = {
         id: messageId === 'current' ? `ai_${Date.now()}` : messageId,
@@ -72,11 +100,17 @@ interface ChatState {
         messages: [...state.messages, newMessage],
         streamingChunks: newChunks,
         isStreaming: false,
+        typingState: 'none',
+        lastChunkTimestamp: null,
       };
-    }),
+    });
+  },
 
   setStreaming: (isStreaming) => set({ isStreaming }),
-  setTyping: (isTyping) => set({ isTyping }),
+  
+  setTypingState: (typingState) => set({ typingState }),
+
+  setReplyToMessage: (replyToMessage) => set({ replyToMessage }),
 
   clearStreamingChunks: (messageId) =>
     set((state) => {
@@ -87,4 +121,37 @@ interface ChatState {
       }
       return { streamingChunks: {} };
     }),
+
+  startTypingTimeout: () => {
+    const { clearTypingTimeouts } = get();
+    clearTypingTimeouts();
+
+    const tId = setTimeout(() => {
+      set({ typingState: 'thinking' });
+    }, 6000);
+
+    const eId = setTimeout(() => {
+      set({ typingState: 'error' });
+    }, 15000);
+
+    set({ typingTimeoutId: tId as unknown as NodeJS.Timeout, errorTimeoutId: eId as unknown as NodeJS.Timeout });
+  },
+
+  clearTypingTimeouts: () => {
+    const { typingTimeoutId, errorTimeoutId } = get();
+    if (typingTimeoutId) clearTimeout(typingTimeoutId);
+    if (errorTimeoutId) clearTimeout(errorTimeoutId);
+    set({ typingTimeoutId: null, errorTimeoutId: null });
+  },
+
+  resetStreaming: () => {
+    const { clearTypingTimeouts } = get();
+    clearTypingTimeouts();
+    set({
+      isStreaming: false,
+      typingState: 'none',
+      streamingChunks: {},
+      lastChunkTimestamp: null,
+    });
+  },
 }));

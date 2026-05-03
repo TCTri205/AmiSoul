@@ -76,7 +76,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
     // Server-sent events
     socketInstance.on(SOCKET_EVENTS.PROCESSING_START, () => {
-      useChatStore.getState().setTyping(true);
+      useChatStore.getState().setTypingState('initial');
+      useChatStore.getState().startTypingTimeout();
     });
 
     socketInstance.on(SOCKET_EVENTS.MESSAGE_ACK, (data: MessageAckPayload) => {
@@ -84,7 +85,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     });
 
     socketInstance.on(SOCKET_EVENTS.AI_RESPONSE, (data: AiResponsePayload) => {
-      useChatStore.getState().setTyping(false);
+      useChatStore.getState().clearTypingTimeouts();
+      useChatStore.getState().setTypingState('none');
       useChatStore.getState().addMessage({
         id: data.id || `ai_${Date.now()}`,
         content: data.content,
@@ -97,7 +99,6 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     socketInstance.on(SOCKET_EVENTS.STREAM_CHUNK, (data: StreamChunkPayload) => {
       // Use 'current' as fallback if messageId is missing (MVP compatibility)
       const messageId = data.messageId || 'current';
-      useChatStore.getState().setTyping(false);
       useChatStore.getState().setStreaming(true);
       useChatStore.getState().appendChunk(messageId, data.content);
       

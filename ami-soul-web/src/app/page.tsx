@@ -1,21 +1,19 @@
-import { Button } from "@/components/ui/button";
+'use client';
+
+import Header from "@/components/layout/Header";
+import { ChatContainer, InputArea } from "@/components/chat";
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-4 text-center">
-      <div className="max-w-md space-y-4 rounded-3xl bg-white/20 p-8 backdrop-blur-md dark:bg-black/20">
-        <h1 className="text-4xl font-bold tracking-tight">AmiSoul</h1>
-        <p className="text-lg opacity-80">
-          Start a conversation with Ami, your emotional companion.
-        </p>
-        <Button className="rounded-full px-8" size="lg">
-          Start Chatting
-        </Button>
-      </div>
+    <div className="flex flex-col h-full w-full max-w-2xl mx-auto shadow-2xl relative bg-transparent">
+      <Header />
       
-      <div className="mt-8 text-sm opacity-50">
-        Safe Harbor Frontend initialized successfully.
-      </div>
+      <ChatContainer />
+      
+      <InputArea />
+      
+      {/* Visual background effect integration for chat area if needed */}
+      <div className="absolute inset-0 pointer-events-none -z-10 bg-white/5 dark:bg-black/5" />
     </div>
   );
 }
