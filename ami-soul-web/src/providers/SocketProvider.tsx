@@ -6,11 +6,18 @@ import { useChatStore } from '@/store/useChatStore';
 import { useVibeStore } from '@/store/useVibeStore';
 import { generateDeviceId } from '@/lib/utils';
 import { SOCKET_EVENTS } from '@/types/socket-events';
-import type { SessionVibe } from '@/types/vibe';
+import type { 
+  MessageMetadata, 
+  StreamChunkPayload, 
+  MessageAckPayload, 
+  VibeUpdatePayload, 
+  AiResponsePayload,
+  SocketErrorPayload 
+} from '@/types/socket.types';
 
 type SocketContextValue = {
   socket: Socket | null;
-  sendMessage: (content: string, metadata?: any) => void;
+  sendMessage: (content: string, metadata?: MessageMetadata) => void;
   sendInterrupt: (payload?: { messageId?: string }) => void;
   sendReaction: (messageId: string, emoji: string) => void;
 };
@@ -54,6 +61,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     socketInstance.on(SOCKET_EVENTS.DISCONNECT, () => {
       console.log('[Socket] Disconnected');
       useVibeStore.getState().setConnectionStatus('disconnected');
+      useVibeStore.getState().setVibe('offline');
     });
 
     socketInstance.on(SOCKET_EVENTS.RECONNECT_ATTEMPT, () => {
@@ -63,6 +71,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     socketInstance.on(SOCKET_EVENTS.CONNECT_ERROR, (err) => {
       console.error('[Socket] Connection Error:', err);
       useVibeStore.getState().setConnectionStatus('disconnected');
+      useVibeStore.getState().setVibe('offline');
     });
 
     // Server-sent events
@@ -70,7 +79,22 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       useChatStore.getState().setTyping(true);
     });
 
-    socketInstance.on(SOCKET_EVENTS.STREAM_CHUNK, (data: { messageId?: string; content: string; is_complete?: boolean }) => {
+    socketInstance.on(SOCKET_EVENTS.MESSAGE_ACK, (data: MessageAckPayload) => {
+      useChatStore.getState().updateMessageStatus(data.messageId, 'sent');
+    });
+
+    socketInstance.on(SOCKET_EVENTS.AI_RESPONSE, (data: AiResponsePayload) => {
+      useChatStore.getState().setTyping(false);
+      useChatStore.getState().addMessage({
+        id: data.id || `ai_${Date.now()}`,
+        content: data.content,
+        role: (data.role === 'assistant' || data.role === 'user' || data.role === 'system') ? data.role : 'assistant',
+        timestamp: new Date(data.timestamp),
+        status: 'sent',
+      });
+    });
+
+    socketInstance.on(SOCKET_EVENTS.STREAM_CHUNK, (data: StreamChunkPayload) => {
       // Use 'current' as fallback if messageId is missing (MVP compatibility)
       const messageId = data.messageId || 'current';
       useChatStore.getState().setTyping(false);
@@ -78,19 +102,20 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       useChatStore.getState().appendChunk(messageId, data.content);
       
       if (data.is_complete) {
-        useChatStore.getState().setStreaming(false);
+        useChatStore.getState().finalizeStream(messageId);
       }
     });
 
     socketInstance.on(SOCKET_EVENTS.STREAM_END, (data: { messageId?: string }) => {
-      useChatStore.getState().setStreaming(false);
+      const messageId = (data && data.messageId) || 'current';
+      useChatStore.getState().finalizeStream(messageId);
     });
 
-    socketInstance.on(SOCKET_EVENTS.VIBE_UPDATE, (data: { vibe: SessionVibe }) => {
+    socketInstance.on(SOCKET_EVENTS.VIBE_UPDATE, (data: VibeUpdatePayload) => {
       useVibeStore.getState().setVibe(data.vibe);
     });
 
-    socketInstance.on(SOCKET_EVENTS.ERROR, (err: any) => {
+    socketInstance.on(SOCKET_EVENTS.ERROR, (err: SocketErrorPayload) => {
       console.error('[Socket] Server Error:', err);
     });
 
@@ -99,7 +124,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const sendMessage = useCallback((content: string, metadata?: any) => {
+  const sendMessage = useCallback((content: string, metadata?: MessageMetadata) => {
     if (socket) {
       socket.emit(SOCKET_EVENTS.MESSAGE_SENT, { content, metadata });
     }

@@ -10,6 +10,8 @@ export const SOCKET_EVENTS = {
   STREAM_END: 'stream_end',           // Streaming AI response completed
   VIBE_UPDATE: 'vibe_update',         // Session vibe change
   PROCESSING_START: 'processing_start', // AI started thinking
+  MESSAGE_ACK: 'message_ack',         // Message received and buffered
+  AI_RESPONSE: 'ai_response',         // Full AI message (not streamed)
   ERROR: 'error',                     // Generic error
 
   // Client -> Server

@@ -41,17 +41,29 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     server.use(async (socket, next) => {
       try {
         const token = this.extractToken(socket);
-        if (!token) {
-          return next(new Error('Authentication error: Token not found'));
+        const deviceId =
+          socket.handshake.query?.device_id || socket.handshake.auth?.device_id;
+
+        if (token) {
+          const payload = await this.authService.validateToken(token);
+          if (payload) {
+            // Authenticated user
+            (socket as any).user = payload;
+          } else {
+            return next(new Error('Authentication error: Invalid token'));
+          }
+        } else if (deviceId) {
+          // Guest user via Device ID
+          (socket as any).user = {
+            id: deviceId,
+            username: `Guest_${(deviceId as string).slice(0, 8)}`,
+            isGuest: true,
+          };
+        } else {
+          return next(new Error('Authentication error: Token or Device_ID not found'));
         }
 
-        const payload = await this.authService.validateToken(token);
-        if (!payload) {
-          return next(new Error('Authentication error: Invalid token'));
-        }
-
-        // Attach user and session metadata to socket
-        (socket as any).user = payload;
+        // Attach session metadata to socket
         (socket as any).sessionType =
           socket.handshake.auth?.session_type ||
           socket.handshake.query?.session_type ||
@@ -98,6 +110,13 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
     const duration = Date.now() - startTime;
     this.logger.log(`Gateway processing time: ${duration}ms`);
+
+    // Explicitly emit message_ack to the user's room to support "seen" indicator
+    this.server.to(`user:${user.id}`).emit('message_ack', {
+      messageId: data.metadata?.messageId || 'buffered',
+      status: 'buffered',
+      timestamp: new Date().toISOString(),
+    });
 
     return {
       status: 'buffered',
