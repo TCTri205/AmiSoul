@@ -1,9 +1,16 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import CircuitBreaker from 'opossum';
 import * as crypto from 'crypto';
+import { Observable, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
-import { ILlmProvider, LlmRequest, LlmResponse } from './interfaces/llm-provider.interface';
+import {
+  ILlmProvider,
+  LlmRequest,
+  LlmResponse,
+  LlmStreamChunk,
+} from './interfaces/llm-provider.interface';
 import { RedisService } from '../redis/redis.service';
 
 @Injectable()
@@ -82,6 +89,38 @@ export class LlmOrchestrator implements OnModuleInit {
     }
 
     throw lastError || new Error('All LLM providers failed or are unavailable');
+  }
+
+  generateStream(request: LlmRequest): Observable<LlmStreamChunk> {
+    // For streaming, we don't use the circuit breaker in the same way because
+    // the breaker is designed for Promise-based calls.
+    // Instead, we'll try the providers in sequence.
+    // This is a simplified version of orchestration for streaming.
+
+    const attemptProvider = (index: number): Observable<LlmStreamChunk> => {
+      if (index >= this.providers.length) {
+        return throwError(() => new Error('All LLM providers failed to start stream'));
+      }
+
+      const { provider } = this.providers[index];
+
+      this.logger.log(`Attempting stream with provider: ${provider.name}`);
+
+      return provider.generateStream(request).pipe(
+        catchError((error) => {
+          if (error.name === 'AbortError' || request.signal?.aborted) {
+            return throwError(() => error);
+          }
+
+          this.logger.warn(
+            `Provider ${provider.name} stream failed: ${error.message}. Trying next provider...`,
+          );
+          return attemptProvider(index + 1);
+        }),
+      );
+    };
+
+    return attemptProvider(0);
   }
 
   async embed(text: string): Promise<number[]> {

@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
-import { ILlmProvider, LlmRequest, LlmResponse } from '../interfaces/llm-provider.interface';
+import { Observable } from 'rxjs';
+import {
+  ILlmProvider,
+  LlmRequest,
+  LlmResponse,
+  LlmStreamChunk,
+} from '../interfaces/llm-provider.interface';
 
 @Injectable()
 export class GeminiProvider implements ILlmProvider {
@@ -91,6 +97,83 @@ export class GeminiProvider implements ILlmProvider {
     }
 
     throw lastError;
+  }
+
+  generateStream(request: LlmRequest): Observable<LlmStreamChunk> {
+    return new Observable<LlmStreamChunk>((subscriber) => {
+      if (this.apiKeys.length === 0) {
+        subscriber.error(new Error('Gemini API keys not configured'));
+        return;
+      }
+
+      const apiKey = this.apiKeys[this.currentKeyIndex];
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        systemInstruction: request.systemPrompt,
+        generationConfig: {
+          responseMimeType: request.responseFormat === 'json' ? 'application/json' : 'text/plain',
+          temperature: request.temperature,
+          maxOutputTokens: request.maxTokens,
+        },
+      });
+
+      const startStream = async () => {
+        try {
+          const result = await model.generateContentStream(request.userPrompt, {
+            signal: request.signal,
+          });
+
+          for await (const chunk of result.stream) {
+            if (request.signal?.aborted) {
+              subscriber.error(new Error('AbortError'));
+              return;
+            }
+
+            const chunkText = chunk.text();
+            subscriber.next({
+              text: chunkText,
+              isComplete: false,
+              provider: this.name,
+              model: 'gemini-2.5-flash',
+            });
+          }
+
+          const response = await result.response;
+          subscriber.next({
+            text: '',
+            isComplete: true,
+            provider: this.name,
+            model: 'gemini-2.5-flash',
+            usage: {
+              promptTokens: response.usageMetadata?.promptTokenCount || 0,
+              completionTokens: response.usageMetadata?.candidatesTokenCount || 0,
+              totalTokens: response.usageMetadata?.totalTokenCount || 0,
+            },
+          });
+          subscriber.complete();
+        } catch (error) {
+          if (error.name === 'AbortError' || request.signal?.aborted) {
+            subscriber.error(error);
+          } else if (
+            error.status === 429 ||
+            error.message?.includes('429') ||
+            error.message?.includes('Too Many Requests')
+          ) {
+            this.logger.warn(`Gemini API key ${this.currentKeyIndex} rate limited. Rotating...`);
+            this.rotateKey();
+            // In a stream, we might not be able to retry as easily without restarting the whole stream
+            // For now, just error out so the orchestrator can decide
+            subscriber.error(error);
+          } else {
+            this.logger.error(`Gemini Stream error with key ${this.currentKeyIndex}: ${error.message}`);
+            subscriber.error(error);
+          }
+        }
+      };
+
+      startStream();
+    });
   }
 
   async embed(text: string): Promise<number[]> {

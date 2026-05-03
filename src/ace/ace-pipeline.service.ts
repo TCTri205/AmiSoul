@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PerceptionMiddleware } from './middleware/perception.middleware';
 import { CognitiveContext } from './middleware/dto/cognitive-context.dto';
 import { ContextRetrieverService } from './stages/stage2-context-retriever/context-retriever.service';
+import { SimulationService } from './stages/stage3-simulation/simulation.service';
 
 @Injectable()
 export class AcePipelineService {
@@ -17,6 +18,7 @@ export class AcePipelineService {
   constructor(
     private readonly stage1: Stage1PerceptionService,
     private readonly stage2: ContextRetrieverService,
+    private readonly stage3: SimulationService,
     private readonly identityService: IdentityService,
     private readonly crisisService: CrisisService,
     private readonly perceptionMiddleware: PerceptionMiddleware,
@@ -105,7 +107,7 @@ export class AcePipelineService {
     // Stage 3: LLM Simulation (Full Reasoning)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 3: Simulating empathetic response for user: ${userId}`);
-    // [TODO] Call Stage 3 Service with context and retrievedContext
+    await this.stage3.simulate(context, retrievedContext, signal);
 
     // Stage 4: Vibe & Safety Monitor
     if (signal?.aborted) throw new Error('AbortError');
@@ -130,7 +132,7 @@ export class AcePipelineService {
     // Stage 3: Fast Simulation (Small model or direct response)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 3: Generating fast response for user: ${userId}`);
-    // [TODO] Call Stage 3 Service with context
+    await this.stage3.simulate(context, retrievedContext, signal);
 
     // Stage 4: Monitor (Still needed for safety)
     if (signal?.aborted) throw new Error('AbortError');

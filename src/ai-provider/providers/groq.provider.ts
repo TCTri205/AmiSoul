@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Groq from 'groq-sdk';
-import { ILlmProvider, LlmRequest, LlmResponse } from '../interfaces/llm-provider.interface';
+import { Observable } from 'rxjs';
+import {
+  ILlmProvider,
+  LlmRequest,
+  LlmResponse,
+  LlmStreamChunk,
+} from '../interfaces/llm-provider.interface';
 
 @Injectable()
 export class GroqProvider implements ILlmProvider {
@@ -97,6 +103,81 @@ export class GroqProvider implements ILlmProvider {
     }
 
     throw lastError;
+  }
+
+  generateStream(request: LlmRequest): Observable<LlmStreamChunk> {
+    return new Observable<LlmStreamChunk>((subscriber) => {
+      if (this.apiKeys.length === 0) {
+        subscriber.error(new Error('Groq API keys not configured'));
+        return;
+      }
+
+      const apiKey = this.apiKeys[this.currentKeyIndex];
+      const groq = new Groq({ apiKey });
+
+      const messages: any[] = [];
+      if (request.systemPrompt) {
+        messages.push({ role: 'system', content: request.systemPrompt });
+      }
+      messages.push({ role: 'user', content: request.userPrompt });
+
+      const startStream = async () => {
+        try {
+          const stream = await groq.chat.completions.create(
+            {
+              messages,
+              model: 'llama-3.3-70b-versatile',
+              temperature: request.temperature ?? 0.7,
+              max_tokens: request.maxTokens,
+              stream: true,
+            },
+            { signal: request.signal },
+          );
+
+          for await (const chunk of stream) {
+            if (request.signal?.aborted) {
+              subscriber.error(new Error('AbortError'));
+              return;
+            }
+
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+              subscriber.next({
+                text: content,
+                isComplete: false,
+                provider: this.name,
+                model: 'llama-3.3-70b-versatile',
+              });
+            }
+          }
+
+          subscriber.next({
+            text: '',
+            isComplete: true,
+            provider: this.name,
+            model: 'llama-3.3-70b-versatile',
+          });
+          subscriber.complete();
+        } catch (error) {
+          if (error.name === 'AbortError' || request.signal?.aborted) {
+            subscriber.error(error);
+          } else if (
+            error.status === 429 ||
+            error.message?.includes('429') ||
+            error.message?.includes('Too Many Requests')
+          ) {
+            this.logger.warn(`Groq API key ${this.currentKeyIndex} rate limited. Rotating...`);
+            this.rotateKey();
+            subscriber.error(error);
+          } else {
+            this.logger.error(`Groq Stream error with key ${this.currentKeyIndex}: ${error.message}`);
+            subscriber.error(error);
+          }
+        }
+      };
+
+      startStream();
+    });
   }
 
   private rotateKey() {

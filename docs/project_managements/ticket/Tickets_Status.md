@@ -10,7 +10,7 @@ Tài liệu này cung cấp cái nhìn tổng quan về trạng thái thực hi�
 | [Sprint-02](Sprint-02/README.md) | Perception & Intelligent Routing | ✅ Done | 8/8 |
 
 | [Sprint-03](Sprint-03/README.md) | Affective Memory & Security | ✅ Done | 8/8 |
-| [Sprint-04](Sprint-04/README.md) | Unified Cognitive Simulation | 🟢 Ready | 0/7 |
+| [Sprint-04](Sprint-04/README.md) | Unified Cognitive Simulation | ✅ Done | 7/7 |
 | [Sprint-05](Sprint-05/README.md) | Safe Harbor Frontend | 🟢 Ready | 0/8 |
 | [Sprint-06](Sprint-06/README.md) | Empathy Safety & Vibe Monitoring | 🟢 Ready | 0/7 |
 | [Sprint-07](Sprint-07/README.md) | Offline Intelligence & Feedback | 🟢 Ready | 0/9 |
@@ -50,16 +50,16 @@ Tài liệu này cung cấp cái nhìn tổng quan về trạng thái thực hi�
 - [x] [T3.5: Time Anomaly Detector](Sprint-03/T3.5_Time_Anomaly_Detector.md)
 - [x] [T3.6: Bonding Gate Sensitivity](Sprint-03/T3.6_Bonding_Gate_Sensitivity.md)
 - [x] [T3.7: Context Injection Test](Sprint-03/T3.7_Context_Injection_Test.md)
-- [ ] [T3.8: Prisma Encryption Middleware](Sprint-03/T3.8_Prisma_Encryption_Middleware.md)
+- [x] [T3.8: Prisma Encryption Middleware](Sprint-03/T3.8_Prisma_Encryption_Middleware.md)
 
 ### Sprint-04: Unified Cognitive Simulation
-- [ ] [T4.1: SimulationService Gemini 2.5 Flash](Sprint-04/T4.1_Simulation_Service_Gemini.md)
-- [ ] [T4.2: XML Unified System Prompt](Sprint-04/T4.2_XML_System_Prompt.md)
-- [ ] [T4.3: TokenBudgetManager Module](Sprint-04/T4.3_Token_Budget_Manager.md)
-- [ ] [T4.4: Prompt Boundary Isolation](Sprint-04/T4.4_Prompt_Boundary_Isolation.md)
-- [ ] [T4.5: Self-Correction Safety Logic](Sprint-04/T4.5_Self_Correction_Safety.md)
-- [ ] [T4.6: Reaction Generator Emojis](Sprint-04/T4.6_Reaction_Generator_Emoji.md)
-- [ ] [T4.7: Simulation Abort Test](Sprint-04/T4.7_Simulation_Abort_Test.md)
+- [x] [T4.1: SimulationService Gemini 2.5 Flash](Sprint-04/T4.1_Simulation_Service_Gemini.md)
+- [x] [T4.2: XML Unified System Prompt](Sprint-04/T4.2_XML_System_Prompt.md)
+- [x] [T4.3: TokenBudgetManager Module](Sprint-04/T4.3_Token_Budget_Manager.md)
+- [x] [T4.4: Prompt Boundary Isolation](Sprint-04/T4.4_Prompt_Boundary_Isolation.md)
+- [x] [T4.5: Self-Correction Safety Logic](Sprint-04/T4.5_Self_Correction_Safety.md)
+- [x] [T4.6: Reaction Generator Emojis](Sprint-04/T4.6_Reaction_Generator_Emoji.md)
+- [x] [T4.7: Simulation Abort Test](Sprint-04/T4.7_Simulation_Abort_Test.md)
 
 ### Sprint-05: Safe Harbor Frontend
 - [ ] [T5.1: Next.js Custom Theme](Sprint-05/T5.1_Nextjs_Custom_Theme.md)
