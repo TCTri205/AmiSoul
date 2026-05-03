@@ -9,7 +9,19 @@ import { AiProviderModule } from '../../../ai-provider/ai-provider.module';
 
 @Module({
   imports: [ConfigModule, AiProviderModule],
-  providers: [Stage1PerceptionService, IdentityService, CrisisService, InjectionDetectionService, TimeAnomalyService],
-  exports: [Stage1PerceptionService, IdentityService, CrisisService, InjectionDetectionService, TimeAnomalyService],
+  providers: [
+    Stage1PerceptionService,
+    IdentityService,
+    CrisisService,
+    InjectionDetectionService,
+    TimeAnomalyService,
+  ],
+  exports: [
+    Stage1PerceptionService,
+    IdentityService,
+    CrisisService,
+    InjectionDetectionService,
+    TimeAnomalyService,
+  ],
 })
 export class Stage1PerceptionModule {}

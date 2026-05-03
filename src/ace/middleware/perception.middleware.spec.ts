@@ -27,14 +27,16 @@ describe('PerceptionMiddleware', () => {
     });
 
     it('should extract JSON from a markdown wrapped string', () => {
-      const raw = 'Here is the result: ```json\n{"intent":"question","sentiment":"neutral","complexity":5,"urgency":3}\n```';
+      const raw =
+        'Here is the result: ```json\n{"intent":"question","sentiment":"neutral","complexity":5,"urgency":3}\n```';
       const result = (middleware as any).extractJson(raw);
       expect(result.intent).toBe('question');
       expect(result.complexity).toBe(5);
     });
 
     it('should extract JSON from a string with trailing text', () => {
-      const raw = '{"intent":"venting","sentiment":"negative","complexity":8,"urgency":9} Hope this helps!';
+      const raw =
+        '{"intent":"venting","sentiment":"negative","complexity":8,"urgency":9} Hope this helps!';
       const result = (middleware as any).extractJson(raw);
       expect(result.intent).toBe('venting');
       expect(result.urgency).toBe(9);
@@ -69,7 +71,6 @@ describe('PerceptionMiddleware', () => {
       expect((middleware as any).normalizeSentiment('  neutral  ')).toBe(0.0);
     });
   });
-
 
   describe('determineRouting', () => {
     it('should route to fast path for simple input', () => {
@@ -128,7 +129,8 @@ describe('PerceptionMiddleware', () => {
     } as any;
 
     it('should transform raw output into CognitiveContext', () => {
-      const raw = '{"intent":"greeting","sentiment":"positive","complexity":2,"urgency":1,"routing_confidence":0.95}';
+      const raw =
+        '{"intent":"greeting","sentiment":"positive","complexity":2,"urgency":1,"routing_confidence":0.95}';
       const context = middleware.transform(raw, mockPayload);
 
       expect(context.userId).toBe('user123');
@@ -145,7 +147,6 @@ describe('PerceptionMiddleware', () => {
       expect(context.routingPath).toBe('full'); // routing_confidence is 0 in fallback, triggering full path
     });
 
-
     it('should merge existing perception and prioritize heuristic safety flags', () => {
       const raw = '{"intent":"sharing","is_crisis":false}';
       const existing: PerceptionResultDto = {
@@ -161,8 +162,8 @@ describe('PerceptionMiddleware', () => {
         is_crisis: true, // Heuristic says true
         is_injection: false,
       };
-      
-      const context = middleware.transform(raw, mockPayload, existing as any);
+
+      const context = middleware.transform(raw, mockPayload, existing);
 
       expect(context.perception.intent).toBe('sharing');
       expect(context.perception.complexity).toBe(10);
@@ -170,6 +171,5 @@ describe('PerceptionMiddleware', () => {
       expect(context.perception.urgency).toBe(10); // Should be boosted to 10
       expect(context.routingPath).toBe('full');
     });
-
   });
 });

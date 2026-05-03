@@ -14,8 +14,11 @@ interface BehavioralSignature {
 @Injectable()
 export class IdentityService {
   private readonly logger = new Logger(IdentityService.name);
+
   private readonly SIGNATURE_KEY_PREFIX = 'user:behavioral_signature:';
+
   private readonly DEVIATION_THRESHOLD = 0.7;
+
   private readonly MIN_BONDING_FOR_CHECK = 10;
 
   constructor(private readonly redis: RedisService) {}
@@ -49,10 +52,10 @@ export class IdentityService {
       signature = JSON.parse(signatureRaw);
     } catch (e) {
       this.logger.error(`Failed to parse behavioral signature for ${userId}: ${e.message}`);
-      return { 
-        anomalyScore: 0, 
-        isBypassed: true, 
-        reason: 'Error: Failed to parse behavioral signature' 
+      return {
+        anomalyScore: 0,
+        isBypassed: true,
+        reason: 'Error: Failed to parse behavioral signature',
       };
     }
 
@@ -68,11 +71,14 @@ export class IdentityService {
 
     // 4. Calculate Deviations
     const speedDeviation = this.calculateDeviation(metrics.typingSpeed, signature.avgTypingSpeed);
-    const lengthDeviation = this.calculateDeviation(metrics.sentenceLength, signature.avgSentenceLength);
+    const lengthDeviation = this.calculateDeviation(
+      metrics.sentenceLength,
+      signature.avgSentenceLength,
+    );
     const vocabDeviation = this.calculateVocabDeviation(metrics.words, signature.topWords);
 
     // Weighted average
-    const totalScore = (speedDeviation * 0.4) + (lengthDeviation * 0.3) + (vocabDeviation * 0.3);
+    const totalScore = speedDeviation * 0.4 + lengthDeviation * 0.3 + vocabDeviation * 0.3;
 
     this.logger.debug(
       `Identity check for ${userId}: Speed Dev: ${speedDeviation.toFixed(2)}, Length Dev: ${lengthDeviation.toFixed(2)}, Vocab Dev: ${vocabDeviation.toFixed(2)}, Total: ${totalScore.toFixed(2)}`,
@@ -91,15 +97,16 @@ export class IdentityService {
 
     const key = `${this.SIGNATURE_KEY_PREFIX}${userId}`;
     const signatureRaw = await this.redis.get(key);
-    
+
     let signature: BehavioralSignature;
     if (signatureRaw) {
       signature = JSON.parse(signatureRaw);
       // Moving average update
       const n = signature.sampleSize;
       signature.avgTypingSpeed = (signature.avgTypingSpeed * n + metrics.typingSpeed) / (n + 1);
-      signature.avgSentenceLength = (signature.avgSentenceLength * n + metrics.sentenceLength) / (n + 1);
-      
+      signature.avgSentenceLength =
+        (signature.avgSentenceLength * n + metrics.sentenceLength) / (n + 1);
+
       // Merge vocabulary (simplified: just add counts and keep top 20)
       for (const word of metrics.words) {
         signature.topWords[word] = (signature.topWords[word] || 0) + 1;
@@ -109,15 +116,17 @@ export class IdentityService {
         signature.topWords = Object.fromEntries(
           Object.entries(signature.topWords)
             .sort(([, a], [, b]) => b - a)
-            .slice(0, 20)
+            .slice(0, 20),
         );
       }
-      
+
       signature.sampleSize = n + 1;
     } else {
       const topWords: Record<string, number> = {};
-      metrics.words.forEach(w => { topWords[w] = (topWords[w] || 0) + 1; });
-      
+      metrics.words.forEach((w) => {
+        topWords[w] = (topWords[w] || 0) + 1;
+      });
+
       signature = {
         avgTypingSpeed: metrics.typingSpeed,
         avgSentenceLength: metrics.sentenceLength,
@@ -137,19 +146,20 @@ export class IdentityService {
     const fullText = payload.fullContent;
     const charCount = fullText.length;
     // Extract words, lowercased and stripped of punctuation
-    const words = fullText.toLowerCase()
+    const words = fullText
+      .toLowerCase()
       .replace(/[^\w\s]/g, ' ') // replace punctuation with space
       .split(/\s+/)
-      .filter(w => w.length > 2); 
+      .filter((w) => w.length > 2);
     const wordCount = words.length;
-    
+
     // Estimate sentences by punctuation
-    const sentenceCount = fullText.split(/[.!?]+/).filter(s => s.trim().length > 0).length || 1;
+    const sentenceCount = fullText.split(/[.!?]+/).filter((s) => s.trim().length > 0).length || 1;
 
     // Calculate duration
     const startTs = new Date(payload.messages[0].timestamp).getTime();
     const endTs = new Date(payload.messages[payload.messages.length - 1].timestamp).getTime();
-    
+
     if (isNaN(startTs) || isNaN(endTs)) {
       this.logger.warn(`Invalid timestamp in message block for user ${payload.userId}`);
       return null;
@@ -170,9 +180,12 @@ export class IdentityService {
     return Math.min(deviation, 1.0);
   }
 
-  private calculateVocabDeviation(currentWords: string[], topWords: Record<string, number>): number {
+  private calculateVocabDeviation(
+    currentWords: string[],
+    topWords: Record<string, number>,
+  ): number {
     if (!topWords || Object.keys(topWords).length === 0) return 0;
-    
+
     // Only check vocabulary if the message block is long enough to be representative
     if (currentWords.length < 10) return 0;
 
@@ -180,9 +193,9 @@ export class IdentityService {
     const topBaselineWords = Object.keys(topWords)
       .sort((a, b) => topWords[b] - topWords[a])
       .slice(0, 15);
-      
+
     const uniqueCurrentWords = new Set(currentWords);
-    
+
     let matchCount = 0;
     for (const word of topBaselineWords) {
       if (uniqueCurrentWords.has(word)) matchCount++;
@@ -190,9 +203,9 @@ export class IdentityService {
 
     // Heuristic: Matching at least 2 of your top 15 words in a 10+ word block is "normal".
     // This is a very loose check to avoid false positives.
-    const matchRatio = matchCount / 2; 
+    const matchRatio = matchCount / 2;
     const deviation = 1 - Math.min(matchRatio, 1.0);
-    
+
     return deviation;
   }
 }

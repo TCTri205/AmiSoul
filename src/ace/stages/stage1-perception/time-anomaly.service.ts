@@ -49,15 +49,14 @@ export class TimeAnomalyService {
       }
 
       const hour = timestamp.getHours();
-      
+
       // Handle overnight ranges (e.g., 20:00 to 04:00)
       if (baseline.typicalActiveStart <= baseline.typicalActiveEnd) {
         // Normal range (e.g., 08:00 to 22:00)
         return hour < baseline.typicalActiveStart || hour > baseline.typicalActiveEnd;
-      } else {
-        // Overnight range (e.g., 22:00 to 06:00)
-        return hour < baseline.typicalActiveStart && hour > baseline.typicalActiveEnd;
       }
+      // Overnight range (e.g., 22:00 to 06:00)
+      return hour < baseline.typicalActiveStart && hour > baseline.typicalActiveEnd;
     } catch (error) {
       this.logger.error(`Error checking habit deviation for user ${userId}: ${error.message}`);
       return false;

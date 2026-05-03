@@ -11,7 +11,6 @@ export interface Stage1Response {
   rawResponse: string;
 }
 
-
 @Injectable()
 export class Stage1PerceptionService {
   private readonly logger = new Logger(Stage1PerceptionService.name);
@@ -21,12 +20,11 @@ export class Stage1PerceptionService {
     private readonly injectionService: InjectionDetectionService,
     private readonly timeAnomalyService: TimeAnomalyService,
     private readonly llmOrchestrator: LlmOrchestrator,
-  ) { }
+  ) {}
 
   async process(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<Stage1Response> {
-
     this.logger.log(`Stage 1: Processing perception for user ${payload.userId}`);
-    
+
     // Heuristic Crisis Detection (T2.4)
     const isCrisis = this.crisisService.isCrisis(payload.fullContent);
 
@@ -35,32 +33,36 @@ export class Stage1PerceptionService {
     const isInjectionHeuristic = injectionHeuristic.detected && injectionHeuristic.confidence > 0.8;
 
     // Time Anomaly Detection (T3.5)
-    const lastMessageTimestamp = payload.messages[payload.messages.length - 1]?.timestamp 
+    const lastMessageTimestamp = payload.messages[payload.messages.length - 1]?.timestamp
       ? new Date(payload.messages[payload.messages.length - 1].timestamp)
       : new Date();
-    const timeAnomaly = await this.timeAnomalyService.checkAnomaly(payload.userId, lastMessageTimestamp);
+    const timeAnomaly = await this.timeAnomalyService.checkAnomaly(
+      payload.userId,
+      lastMessageTimestamp,
+    );
 
     try {
       // The orchestrator handles retries and failovers
       const result = await this.callLlmInternal(payload, signal);
-      
-      this.logger.log(`Stage 1: Completed for user ${payload.userId} (Crisis: ${result.perception.is_crisis}, Injection: ${result.perception.is_injection})`);
+
+      this.logger.log(
+        `Stage 1: Completed for user ${payload.userId} (Crisis: ${result.perception.is_crisis}, Injection: ${result.perception.is_injection})`,
+      );
       return result;
     } catch (error) {
-
       if (error.name === 'AbortError' || error.message === 'AbortError' || signal?.aborted) {
         this.logger.warn(`Stage 1 Aborted for user ${payload.userId}`);
         throw error;
       }
       this.logger.error(`Stage 1 Failed for user ${payload.userId}: ${error.message}`);
-      
+
       // Fallback result in case of failure, but STILL respect the heuristic crisis check
       return {
         perception: {
           intent: 'unknown',
           sentiment: 'neutral',
           complexity: timeAnomaly ? 7 : 5,
-          urgency: (isCrisis || isInjectionHeuristic) ? 10 : 5,
+          urgency: isCrisis || isInjectionHeuristic ? 10 : 5,
           identity_anomaly: false,
           routing_confidence: 0,
           sarcasm_hint: false,
@@ -72,17 +74,18 @@ export class Stage1PerceptionService {
         },
         rawResponse: '',
       };
-
     }
   }
 
   /**
    * Internal method to prepare prompt and call orchestrator
    */
-  private async callLlmInternal(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<Stage1Response> {
-
+  private async callLlmInternal(
+    payload: AggregatedMessageBlockDto,
+    signal?: AbortSignal,
+  ): Promise<Stage1Response> {
     const isLongBlock = payload.fullContent.length > 2500; // Rough estimate for 800-1000 tokens
-    
+
     const systemPrompt = `
       You are the Perception Layer (Stage 1) of AmiSoul, an empathetic AI companion.
       Your task is to analyze the user's message block and extract metadata for pipeline routing.
@@ -124,35 +127,51 @@ export class Stage1PerceptionService {
         signal,
       });
 
-      const text = response.text;
+      const { text } = response;
 
       try {
         // Robust JSON parsing: handle potential markdown wrapping if it occurs
-        const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const cleanedText = text
+          .replace(/```json/g, '')
+          .replace(/```/g, '')
+          .trim();
         const perception = JSON.parse(cleanedText) as PerceptionResultDto;
-        
+
         // --- Sanitization & Heuristic Overrides ---
-        
+
         // 1. Sanitize Intent (prevent hallucinations like 'is_injection')
-        const validIntents = ['greeting', 'question', 'venting', 'sharing', 'seeking_advice', 'closing', 'forget_me', 'delete_memory', 'factual_query', 'unknown'];
-        if (!validIntents.includes(perception.intent as string)) {
+        const validIntents = [
+          'greeting',
+          'question',
+          'venting',
+          'sharing',
+          'seeking_advice',
+          'closing',
+          'forget_me',
+          'delete_memory',
+          'factual_query',
+          'unknown',
+        ];
+        if (!validIntents.includes(perception.intent)) {
           this.logger.warn(`Invalid intent detected: ${perception.intent}. Defaulting to unknown.`);
           perception.intent = 'unknown';
         }
 
         // 2. Heuristic Crisis Detection (T2.4)
         const isCrisis = this.crisisService.isCrisis(payload.fullContent);
-        
+
         // 3. Heuristic Injection Detection (T2.5)
         const injectionHeuristic = this.injectionService.detect(payload.fullContent);
-        const isInjectionHeuristic = injectionHeuristic.detected && injectionHeuristic.confidence > 0.8;
+        const isInjectionHeuristic =
+          injectionHeuristic.detected && injectionHeuristic.confidence > 0.8;
 
         // 4. Merge results
         perception.is_crisis = isCrisis || perception.is_crisis === true;
         perception.is_injection = isInjectionHeuristic || perception.is_injection === true;
-        
+
         if (perception.is_injection) {
-          perception.injection_reason = injectionHeuristic.reason || 'AI detected potential prompt manipulation';
+          perception.injection_reason =
+            injectionHeuristic.reason || 'AI detected potential prompt manipulation';
         }
 
         if (perception.is_crisis || perception.is_injection) {
@@ -160,16 +179,21 @@ export class Stage1PerceptionService {
         }
 
         // 5. Time Anomaly Post-processing (T3.5)
-        const lastMessageTimestamp = payload.messages[payload.messages.length - 1]?.timestamp 
+        const lastMessageTimestamp = payload.messages[payload.messages.length - 1]?.timestamp
           ? new Date(payload.messages[payload.messages.length - 1].timestamp)
           : new Date();
-        const timeAnomaly = await this.timeAnomalyService.checkAnomaly(payload.userId, lastMessageTimestamp);
-        
+        const timeAnomaly = await this.timeAnomalyService.checkAnomaly(
+          payload.userId,
+          lastMessageTimestamp,
+        );
+
         if (timeAnomaly) {
           perception.timestamp_flag = timeAnomaly;
           // Boost complexity by +2, capped at 10
           perception.complexity = Math.min((perception.complexity || 5) + 2, 10);
-          this.logger.debug(`Time Anomaly Detected (${timeAnomaly}). Complexity boosted to ${perception.complexity}`);
+          this.logger.debug(
+            `Time Anomaly Detected (${timeAnomaly}). Complexity boosted to ${perception.complexity}`,
+          );
         }
 
         return { perception, rawResponse: text };
@@ -177,7 +201,6 @@ export class Stage1PerceptionService {
         this.logger.error(`Failed to parse LLM response: ${text}`);
         throw new Error('Invalid response format from AI');
       }
-
     } catch (error) {
       if (error.name === 'AbortError' || error.message?.includes('AbortError')) {
         throw error;

@@ -22,15 +22,17 @@ export class PerceptionMiddleware {
     try {
       // 1. Robust JSON Extraction
       const parsedPerception = this.extractJson(rawGeminiOutput);
-      
+
       // Merge: Heuristics from existingPerception should take precedence for safety flags
-      perception = existingPerception ? { ...existingPerception, ...parsedPerception } : parsedPerception;
+      perception = existingPerception
+        ? { ...existingPerception, ...parsedPerception }
+        : parsedPerception;
 
       // Special handling: if heuristics triggered safety flags, keep them true even if LLM said false
       if (existingPerception) {
         perception.is_crisis = existingPerception.is_crisis || perception.is_crisis;
         perception.is_injection = existingPerception.is_injection || perception.is_injection;
-        
+
         if (existingPerception.injection_reason && !perception.injection_reason) {
           perception.injection_reason = existingPerception.injection_reason;
         }
@@ -44,7 +46,6 @@ export class PerceptionMiddleware {
       this.logger.error(`Failed to parse perception JSON: ${error.message}. Using fallback.`);
       perception = existingPerception || this.getFallbackPerception();
     }
-
 
     // 2. Normalize Sentiment
     const normalizedSentiment = this.normalizeSentiment(perception.sentiment);
@@ -70,7 +71,7 @@ export class PerceptionMiddleware {
   private extractJson(text: string): PerceptionResultDto {
     // Look for JSON block wrapped in triple backticks or just the raw object
     const jsonMatch = text.match(/(\{[\s\S]*\})/);
-    
+
     if (!jsonMatch) {
       throw new Error('No JSON object found in text');
     }
@@ -89,7 +90,7 @@ export class PerceptionMiddleware {
    */
   private normalizeSentiment(sentiment: string): number {
     if (!sentiment) return 0.0;
-    
+
     const normalized = sentiment.toLowerCase().trim();
     switch (normalized) {
       case 'positive':
@@ -101,7 +102,6 @@ export class PerceptionMiddleware {
         return 0.0;
     }
   }
-
 
   /**
    * Core routing decision logic with safe defaults.
@@ -115,15 +115,10 @@ export class PerceptionMiddleware {
 
     const isTimeAnomaly = typeof perception.timestamp_flag === 'string';
 
-    const isComplex = 
-      complexity > 7 || 
-      confidence < 0.85 || 
-      urgency > 8 ||
-      isTimeAnomaly;
+    const isComplex = complexity > 7 || confidence < 0.85 || urgency > 8 || isTimeAnomaly;
 
     return isComplex ? 'full' : 'fast';
   }
-
 
   private getFallbackPerception(): PerceptionResultDto {
     return {

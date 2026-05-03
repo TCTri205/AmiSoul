@@ -1,14 +1,15 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import CircuitBreaker from 'opossum';
+import * as crypto from 'crypto';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { ILlmProvider, LlmRequest, LlmResponse } from './interfaces/llm-provider.interface';
 import { RedisService } from '../redis/redis.service';
-import * as crypto from 'crypto';
 
 @Injectable()
 export class LlmOrchestrator implements OnModuleInit {
   private readonly logger = new Logger(LlmOrchestrator.name);
+
   private providers: { provider: ILlmProvider; breaker: CircuitBreaker }[] = [];
 
   constructor(
@@ -28,19 +29,27 @@ export class LlmOrchestrator implements OnModuleInit {
     // Priority 1: Groq
     this.providers.push({
       provider: this.groqProvider,
-      breaker: new CircuitBreaker(this.groqProvider.generate.bind(this.groqProvider), breakerOptions),
+      breaker: new CircuitBreaker(
+        this.groqProvider.generate.bind(this.groqProvider),
+        breakerOptions,
+      ),
     });
 
     // Priority 2: Gemini
     this.providers.push({
       provider: this.geminiProvider,
-      breaker: new CircuitBreaker(this.geminiProvider.generate.bind(this.geminiProvider), breakerOptions),
+      breaker: new CircuitBreaker(
+        this.geminiProvider.generate.bind(this.geminiProvider),
+        breakerOptions,
+      ),
     });
 
     // Setup logging for breakers
     this.providers.forEach(({ provider, breaker }) => {
       breaker.on('open', () => this.logger.warn(`Circuit Breaker OPEN for ${provider.name}`));
-      breaker.on('halfOpen', () => this.logger.log(`Circuit Breaker HALF_OPEN for ${provider.name}`));
+      breaker.on('halfOpen', () =>
+        this.logger.log(`Circuit Breaker HALF_OPEN for ${provider.name}`),
+      );
       breaker.on('close', () => this.logger.log(`Circuit Breaker CLOSED for ${provider.name}`));
     });
   }
@@ -57,7 +66,7 @@ export class LlmOrchestrator implements OnModuleInit {
 
       try {
         this.logger.log(`Attempting generation with provider: ${provider.name}`);
-        return await breaker.fire(request) as LlmResponse;
+        return (await breaker.fire(request)) as LlmResponse;
       } catch (error) {
         lastError = error;
 
@@ -66,7 +75,9 @@ export class LlmOrchestrator implements OnModuleInit {
           throw error;
         }
 
-        this.logger.warn(`Provider ${provider.name} failed: ${error.message}. Trying next provider...`);
+        this.logger.warn(
+          `Provider ${provider.name} failed: ${error.message}. Trying next provider...`,
+        );
       }
     }
 
@@ -89,7 +100,7 @@ export class LlmOrchestrator implements OnModuleInit {
 
     if (this.geminiProvider.embed) {
       const embedding = await this.geminiProvider.embed(text);
-      
+
       try {
         await this.redisService.set(cacheKey, JSON.stringify(embedding), 24 * 60 * 60 * 1000); // 24h cache
       } catch (error) {

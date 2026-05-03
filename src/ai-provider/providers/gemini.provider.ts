@@ -6,14 +6,22 @@ import { ILlmProvider, LlmRequest, LlmResponse } from '../interfaces/llm-provide
 @Injectable()
 export class GeminiProvider implements ILlmProvider {
   private readonly logger = new Logger(GeminiProvider.name);
+
   public readonly name = 'gemini';
+
   private apiKeys: string[] = [];
+
   private currentKeyIndex = 0;
 
   constructor(private readonly configService: ConfigService) {
-    const keysStr = this.configService.get<string>('GEMINI_API_KEYS') || this.configService.get<string>('GEMINI_API_KEY');
+    const keysStr =
+      this.configService.get<string>('GEMINI_API_KEYS') ||
+      this.configService.get<string>('GEMINI_API_KEY');
     if (keysStr) {
-      this.apiKeys = keysStr.split(',').map(k => k.trim()).filter(k => k.length > 0);
+      this.apiKeys = keysStr
+        .split(',')
+        .map((k) => k.trim())
+        .filter((k) => k.length > 0);
     }
 
     if (this.apiKeys.length === 0) {
@@ -59,12 +67,16 @@ export class GeminiProvider implements ILlmProvider {
         };
       } catch (error) {
         lastError = error;
-        
+
         // Check for rate limit error (429)
-        if (error.status === 429 || error.message?.includes('429') || error.message?.includes('Too Many Requests')) {
+        if (
+          error.status === 429 ||
+          error.message?.includes('429') ||
+          error.message?.includes('Too Many Requests')
+        ) {
           this.logger.warn(`Gemini API key ${this.currentKeyIndex} rate limited. Rotating...`);
           this.rotateKey();
-          continue; 
+          continue;
         }
 
         // If it's an abort error, don't retry
@@ -98,14 +110,18 @@ export class GeminiProvider implements ILlmProvider {
         return result.embedding.values;
       } catch (error) {
         lastError = error;
-        
+
         if (error.status === 429 || error.message?.includes('429')) {
-          this.logger.warn(`Gemini Embedding key ${this.currentKeyIndex} rate limited. Rotating...`);
+          this.logger.warn(
+            `Gemini Embedding key ${this.currentKeyIndex} rate limited. Rotating...`,
+          );
           this.rotateKey();
           continue;
         }
 
-        this.logger.error(`Gemini Embedding error with key ${this.currentKeyIndex}: ${error.message}`);
+        this.logger.error(
+          `Gemini Embedding error with key ${this.currentKeyIndex}: ${error.message}`,
+        );
         this.rotateKey();
       }
     }

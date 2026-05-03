@@ -144,8 +144,7 @@ describe('Stage1PerceptionService', () => {
         return { text: 'ok', provider: 'p', model: 'm' };
       });
 
-      await expect(service.process(payload, controller.signal))
-        .rejects.toThrow('AbortError');
+      await expect(service.process(payload, controller.signal)).rejects.toThrow('AbortError');
     });
 
     it('should boost complexity and set timestamp_flag when Time Anomaly is detected', async () => {

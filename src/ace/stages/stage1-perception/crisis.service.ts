@@ -32,13 +32,13 @@ export class CrisisService {
    */
   isCrisis(text: string): boolean {
     if (!text) return false;
-    
+
     const isDetected = this.CRISIS_PATTERNS.some((pattern) => pattern.test(text));
-    
+
     if (isDetected) {
       this.logger.warn(`Crisis detected in text: "${text.substring(0, 50)}..."`);
     }
-    
+
     return isDetected;
   }
 

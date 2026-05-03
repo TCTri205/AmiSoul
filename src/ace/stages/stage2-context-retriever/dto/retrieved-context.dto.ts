@@ -20,12 +20,17 @@ export interface CalEvent {
 
 export class RetrievedContextDto {
   memories: StoredMemory[];
+
   calEvents: CalEvent[];
+
   bondingScore: number;
+
   sessionVibe: string;
+
   personaShield: string;
+
   userPersonaModel: any;
-  
+
   // Budget tracking for Stage 3
   tokenEstimates: {
     persona: number;

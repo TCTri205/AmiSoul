@@ -10,7 +10,6 @@ import { PerceptionMiddleware } from './middleware/perception.middleware';
 import { CognitiveContext } from './middleware/dto/cognitive-context.dto';
 import { ContextRetrieverService } from './stages/stage2-context-retriever/context-retriever.service';
 
-
 @Injectable()
 export class AcePipelineService {
   private readonly logger = new Logger(AcePipelineService.name);
@@ -25,18 +24,17 @@ export class AcePipelineService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-
   @OnEvent('stage0.aggregated')
   async handleAggregatedBlock(payload: AggregatedMessageBlockDto) {
     const { userId, signal } = payload;
     let status: 'success' | 'aborted' | 'failed' = 'success';
-    
+
     try {
       this.logger.log(`Starting ACE Pipeline for user: ${userId}`);
-      
+
       // Stage 1: Perception (Router)
       const stage1Response = await this.stage1.process(payload, signal);
-      
+
       // Middleware: Transform & Normalize (T2.6)
       const context = this.perceptionMiddleware.transform(
         stage1Response.rawResponse,
@@ -46,7 +44,7 @@ export class AcePipelineService {
 
       // Behavioral Identity Check (T2.3)
       await this.performIdentityCheck(payload, context.perception);
-      
+
       // Heuristic Crisis Override (T2.4)
       if (context.perception.is_crisis) {
         this.logger.warn(`Crisis detected for user ${userId}. Triggering Safety Override.`);
@@ -56,7 +54,9 @@ export class AcePipelineService {
 
       // Security Injection Override (T2.5)
       if (context.perception.is_injection) {
-        this.logger.warn(`Prompt Injection detected for user ${userId}. Triggering Security Override.`);
+        this.logger.warn(
+          `Prompt Injection detected for user ${userId}. Triggering Security Override.`,
+        );
         await this.runSecurityOverride(payload, context.perception);
         return;
       }
@@ -68,9 +68,9 @@ export class AcePipelineService {
         await this.runFastPath(context, signal);
       }
 
-      this.logger.log(`ACE Pipeline completed successfully for user: ${userId} (${context.routingPath?.toUpperCase() || 'UNKNOWN'} Path)`);
-
-      
+      this.logger.log(
+        `ACE Pipeline completed successfully for user: ${userId} (${context.routingPath?.toUpperCase() || 'UNKNOWN'} Path)`,
+      );
     } catch (error) {
       if (error.message === 'AbortError' || error.name === 'AbortError' || signal?.aborted) {
         this.logger.warn(`ACE Pipeline aborted for user: ${userId}`);
@@ -89,14 +89,18 @@ export class AcePipelineService {
    */
   private async runFullCognitivePath(context: CognitiveContext, signal?: AbortSignal) {
     const { userId } = context;
-    this.logger.log(`Routing user ${userId} to FULL COGNITIVE PATH (Confidence: ${context.perception.routing_confidence})`);
+    this.logger.log(
+      `Routing user ${userId} to FULL COGNITIVE PATH (Confidence: ${context.perception.routing_confidence})`,
+    );
 
     // Stage 2: Context Retrieval (CMA + CAL)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 2: Retrieving deep context for user: ${userId}`);
     const retrievedContext = await this.stage2.retrieve(context, signal);
-    
-    this.logger.log(`Stage 2: Successfully retrieved context for user ${userId} (${retrievedContext.memories.length} memories, ${retrievedContext.calEvents.length} CAL events)`);
+
+    this.logger.log(
+      `Stage 2: Successfully retrieved context for user ${userId} (${retrievedContext.memories.length} memories, ${retrievedContext.calEvents.length} CAL events)`,
+    );
 
     // Stage 3: LLM Simulation (Full Reasoning)
     if (signal?.aborted) throw new Error('AbortError');
@@ -115,7 +119,9 @@ export class AcePipelineService {
    */
   private async runFastPath(context: CognitiveContext, signal?: AbortSignal) {
     const { userId } = context;
-    this.logger.log(`Routing user ${userId} to FAST PATH (Confidence: ${context.perception.routing_confidence})`);
+    this.logger.log(
+      `Routing user ${userId} to FAST PATH (Confidence: ${context.perception.routing_confidence})`,
+    );
 
     // Stage 2: Skip or minimal retrieval
     this.logger.debug(`Stage 2: Performing minimal retrieval for fast path (User: ${userId})`);
@@ -132,11 +138,13 @@ export class AcePipelineService {
     // [TODO] Call Stage 4 Service with context
   }
 
-
   /**
    * Helper to perform behavioral identity check and update perception metadata
    */
-  private async performIdentityCheck(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto) {
+  private async performIdentityCheck(
+    payload: AggregatedMessageBlockDto,
+    perception: PerceptionResultDto,
+  ) {
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: payload.userId },
@@ -156,9 +164,11 @@ export class AcePipelineService {
 
       // If behavioral deviation is high (> 0.7), flag as anomaly
       if (!identityResult.isBypassed && identityResult.anomalyScore > 0.7) {
-        this.logger.warn(`Identity Anomaly Detected for user ${payload.userId} (Score: ${identityResult.anomalyScore.toFixed(2)})`);
+        this.logger.warn(
+          `Identity Anomaly Detected for user ${payload.userId} (Score: ${identityResult.anomalyScore.toFixed(2)})`,
+        );
         perception.identity_anomaly = true;
-        
+
         // Emit specific event for Gateway/Monitor to react (T2.3)
         this.eventEmitter.emit('identity.anomaly', {
           userId: payload.userId,
@@ -169,23 +179,32 @@ export class AcePipelineService {
 
       // Update behavioral baseline in background if no anomaly is suspected (by both LLM and Heuristics)
       if (!perception.identity_anomaly && !identityResult.isBypassed) {
-        this.identityService.updateSignature(payload.userId, payload).catch(err => 
-          this.logger.error(`Failed to update behavioral signature for ${payload.userId}: ${err.message}`)
-        );
+        this.identityService
+          .updateSignature(payload.userId, payload)
+          .catch((err) =>
+            this.logger.error(
+              `Failed to update behavioral signature for ${payload.userId}: ${err.message}`,
+            ),
+          );
       }
     } catch (error) {
-      this.logger.error(`Error in performIdentityCheck for user ${payload.userId}: ${error.message}`);
+      this.logger.error(
+        `Error in performIdentityCheck for user ${payload.userId}: ${error.message}`,
+      );
     }
   }
 
   /**
    * Safety Override: Bypasses simulation and provides support resources immediately.
    */
-  private async runSafetyOverride(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto) {
+  private async runSafetyOverride(
+    payload: AggregatedMessageBlockDto,
+    perception: PerceptionResultDto,
+  ) {
     const { userId } = payload;
-    
+
     const safetyMessage = this.crisisService.getSafetyResponse();
-    
+
     // Emit safety override event (ChatGateway will listen and send to socket)
     this.eventEmitter.emit('pipeline.safety_override', {
       userId,
@@ -199,13 +218,19 @@ export class AcePipelineService {
   /**
    * Security Override: Bypasses simulation when injection is detected.
    */
-  private async runSecurityOverride(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto) {
+  private async runSecurityOverride(
+    payload: AggregatedMessageBlockDto,
+    perception: PerceptionResultDto,
+  ) {
     const { userId } = payload;
-    
-    const securityMessage = "Tôi xin lỗi, nhưng tôi không thể thực hiện yêu cầu này vì nó vi phạm chính sách an toàn hoặc chứa các chỉ lệnh không phù hợp. Hãy trò chuyện với tôi một cách tự nhiên nhé! 😊";
-    
+
+    const securityMessage =
+      'Tôi xin lỗi, nhưng tôi không thể thực hiện yêu cầu này vì nó vi phạm chính sách an toàn hoặc chứa các chỉ lệnh không phù hợp. Hãy trò chuyện với tôi một cách tự nhiên nhé! 😊';
+
     // Log the attack attempt with the specific reason
-    this.logger.warn(`SECURITY ALERT: Prompt Injection attempt by user ${userId}. Reason: ${perception.injection_reason}. Content: "${payload.fullContent?.substring(0, 100) || 'N/A'}..."`);
+    this.logger.warn(
+      `SECURITY ALERT: Prompt Injection attempt by user ${userId}. Reason: ${perception.injection_reason}. Content: "${payload.fullContent?.substring(0, 100) || 'N/A'}..."`,
+    );
 
     // Emit security override event
     this.eventEmitter.emit('pipeline.security_override', {

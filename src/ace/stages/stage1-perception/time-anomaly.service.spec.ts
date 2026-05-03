@@ -14,10 +14,7 @@ describe('TimeAnomalyService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        TimeAnomalyService,
-        { provide: PrismaService, useValue: mockPrismaService },
-      ],
+      providers: [TimeAnomalyService, { provide: PrismaService, useValue: mockPrismaService }],
     }).compile();
 
     service = module.get<TimeAnomalyService>(TimeAnomalyService);
@@ -69,7 +66,7 @@ describe('TimeAnomalyService', () => {
     });
 
     it('should return Habit_Deviation if timestamp is outside overnight baseline', async () => {
-      const date = new Date('2026-05-03T12:00:00'); 
+      const date = new Date('2026-05-03T12:00:00');
       mockPrismaService.behavioralBaseline.findUnique.mockResolvedValue({
         typicalActiveStart: 22,
         typicalActiveEnd: 6,

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaService } from '../src/prisma/prisma.service';
 import { ConfigModule } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
+import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('PrismaService Vector Search (Integration)', () => {
   let prismaService: PrismaService;
@@ -38,7 +38,7 @@ describe('PrismaService Vector Search (Integration)', () => {
     // Seed memories
     const vector1 = new Array(768).fill(0);
     vector1[0] = 1; // [1, 0, 0, ...]
-    
+
     const vector2 = new Array(768).fill(0);
     vector2[1] = 1; // [0, 1, 0, ...]
 

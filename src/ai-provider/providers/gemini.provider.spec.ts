@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { GeminiProvider } from './gemini.provider';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GeminiProvider } from './gemini.provider';
 
 jest.mock('@google/generative-ai');
 
@@ -14,10 +14,7 @@ describe('GeminiProvider', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        GeminiProvider,
-        { provide: ConfigService, useValue: configMock },
-      ],
+      providers: [GeminiProvider, { provide: ConfigService, useValue: configMock }],
     }).compile();
 
     provider = module.get<GeminiProvider>(GeminiProvider);

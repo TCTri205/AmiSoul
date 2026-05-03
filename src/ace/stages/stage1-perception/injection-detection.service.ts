@@ -30,8 +30,8 @@ export class InjectionDetectionService {
     /what (are|were) the (first|initial) (words|instructions)/i,
     /no (more )?rules/i,
     /without (any )?restrictions/i,
-    /---/ , // Delimiters often used to separate payloads
-    /===/ ,
+    /---/, // Delimiters often used to separate payloads
+    /===/,
     /\[system\]/i,
     /\[admin\]/i,
     /user:.*assistant:/is, // Attempting to fake a conversation history
@@ -47,10 +47,10 @@ export class InjectionDetectionService {
     // Do this BEFORE pattern matching as it is more general
     const delimiterCount = (text.match(/[-=]{3,}/g) || []).length;
     if (delimiterCount > 3) {
-      return { 
-        detected: true, 
-        confidence: 0.7, 
-        reason: 'Excessive delimiters detected' 
+      return {
+        detected: true,
+        confidence: 0.7,
+        reason: 'Excessive delimiters detected',
       };
     }
 
@@ -58,10 +58,10 @@ export class InjectionDetectionService {
     // Increased threshold to 64 to avoid matching long IDs or tokens
     const base64Pattern = /\b[A-Za-z0-9+/]{64,}=*\b/;
     if (base64Pattern.test(text)) {
-      return { 
-        detected: true, 
-        confidence: 0.8, 
-        reason: 'Suspiciously long Base64-like string detected' 
+      return {
+        detected: true,
+        confidence: 0.8,
+        reason: 'Suspiciously long Base64-like string detected',
       };
     }
 
@@ -69,10 +69,10 @@ export class InjectionDetectionService {
     for (const pattern of this.INJECTION_PATTERNS) {
       if (pattern.test(text)) {
         this.logger.warn(`Injection pattern detected: ${pattern}`);
-        return { 
-          detected: true, 
-          confidence: 0.9, 
-          reason: `Matched pattern: ${pattern.toString()}` 
+        return {
+          detected: true,
+          confidence: 0.9,
+          reason: `Matched pattern: ${pattern.toString()}`,
         };
       }
     }

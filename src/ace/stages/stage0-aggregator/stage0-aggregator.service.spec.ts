@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Stage0AggregatorService } from './stage0-aggregator.service';
 import { RedisService } from '../../../redis/redis.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SessionType } from '../../../chat/dto/message.dto';
 
 describe('Stage0AggregatorService', () => {
@@ -52,18 +52,31 @@ describe('Stage0AggregatorService', () => {
   it('should start a new block when no debounce exists', async () => {
     mockRedisService.exists.mockResolvedValue(false);
     mockRedisService.rpush.mockResolvedValue(1);
-    
-    await service.aggregateMessage('user1', 'session1', { content: 'hello' }, SessionType.PERSISTENT);
 
-    expect(mockRedisService.rpush).toHaveBeenCalledWith('buffer:user1', expect.stringContaining('hello'));
+    await service.aggregateMessage(
+      'user1',
+      'session1',
+      { content: 'hello' },
+      SessionType.PERSISTENT,
+    );
+
+    expect(mockRedisService.rpush).toHaveBeenCalledWith(
+      'buffer:user1',
+      expect.stringContaining('hello'),
+    );
     expect(mockRedisService.set).toHaveBeenCalledWith('debounce:user1', 'active', 2500);
     expect(mockRedisService.expire).toHaveBeenCalledWith('buffer:user1', 10000);
   });
 
   it('should reset debounce when it already exists', async () => {
     mockRedisService.exists.mockResolvedValue(true);
-    
-    await service.aggregateMessage('user1', 'session1', { content: 'world' }, SessionType.PERSISTENT);
+
+    await service.aggregateMessage(
+      'user1',
+      'session1',
+      { content: 'world' },
+      SessionType.PERSISTENT,
+    );
 
     expect(mockRedisService.expire).toHaveBeenCalledWith('debounce:user1', 2500);
   });
@@ -79,16 +92,19 @@ describe('Stage0AggregatorService', () => {
     expect(mockRedisService.lrange).toHaveBeenCalledWith('buffer:user1', 0, -1);
     expect(mockRedisService.del).toHaveBeenCalledWith('buffer:user1');
     expect(mockRedisService.del).toHaveBeenCalledWith('debounce:user1');
-    expect(eventEmitter.emit).toHaveBeenCalledWith('stage0.aggregated', expect.objectContaining({
-      userId: 'user1',
-      messages: expect.arrayContaining([
-        expect.objectContaining({ content: 'hello' }),
-        expect.objectContaining({ content: 'world' }),
-      ]),
-      fullContent: 'hello\nworld',
-      sessionType: SessionType.PERSISTENT,
-      requiresSummarization: false,
-    }));
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'stage0.aggregated',
+      expect.objectContaining({
+        userId: 'user1',
+        messages: expect.arrayContaining([
+          expect.objectContaining({ content: 'hello' }),
+          expect.objectContaining({ content: 'world' }),
+        ]),
+        fullContent: 'hello\nworld',
+        sessionType: SessionType.PERSISTENT,
+        requiresSummarization: false,
+      }),
+    );
   });
 
   it('should respect Incognito session type', async () => {
@@ -98,20 +114,30 @@ describe('Stage0AggregatorService', () => {
 
     await service.flushBuffer('user1', 'session1', SessionType.INCOGNITO);
 
-    expect(eventEmitter.emit).toHaveBeenCalledWith('stage0.aggregated', expect.objectContaining({
-      sessionType: SessionType.INCOGNITO,
-    }));
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'stage0.aggregated',
+      expect.objectContaining({
+        sessionType: SessionType.INCOGNITO,
+      }),
+    );
   });
 
   it('should flush immediately if 10 messages reached', async () => {
     mockRedisService.exists.mockResolvedValue(true);
     mockRedisService.rpush.mockResolvedValue(10); // 10th message
-    mockRedisService.lrange.mockResolvedValue(new Array(10).fill(JSON.stringify({ content: 'test', timestamp: '' })));
-    
+    mockRedisService.lrange.mockResolvedValue(
+      new Array(10).fill(JSON.stringify({ content: 'test', timestamp: '' })),
+    );
+
     const flushSpy = jest.spyOn(service, 'flushBuffer');
-    
-    await service.aggregateMessage('user1', 'session1', { content: 'msg 10' }, SessionType.PERSISTENT);
-    
+
+    await service.aggregateMessage(
+      'user1',
+      'session1',
+      { content: 'msg 10' },
+      SessionType.PERSISTENT,
+    );
+
     expect(flushSpy).toHaveBeenCalledWith('user1', 'session1', SessionType.PERSISTENT);
   });
 
@@ -123,9 +149,12 @@ describe('Stage0AggregatorService', () => {
 
     await service.flushBuffer('user1', 'session1', SessionType.PERSISTENT);
 
-    expect(eventEmitter.emit).toHaveBeenCalledWith('stage0.aggregated', expect.objectContaining({
-      requiresSummarization: true,
-    }));
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'stage0.aggregated',
+      expect.objectContaining({
+        requiresSummarization: true,
+      }),
+    );
   });
 
   it('should flush after 4s hard cap even if messages keep arriving', async () => {
@@ -138,12 +167,22 @@ describe('Stage0AggregatorService', () => {
     const flushSpy = jest.spyOn(service, 'flushBuffer');
 
     // 1. First message starts the hard cap
-    await service.aggregateMessage('user1', 'session1', { content: 'msg 1' }, SessionType.PERSISTENT);
+    await service.aggregateMessage(
+      'user1',
+      'session1',
+      { content: 'msg 1' },
+      SessionType.PERSISTENT,
+    );
     expect(flushSpy).not.toHaveBeenCalled();
 
     // 2. Advance 2 seconds, send another message (resets debounce but NOT hard cap)
     jest.advanceTimersByTime(2000);
-    await service.aggregateMessage('user1', 'session1', { content: 'msg 2' }, SessionType.PERSISTENT);
+    await service.aggregateMessage(
+      'user1',
+      'session1',
+      { content: 'msg 2' },
+      SessionType.PERSISTENT,
+    );
     expect(flushSpy).not.toHaveBeenCalled();
 
     // 3. Advance another 2.1 seconds (total 4.1s)
@@ -163,7 +202,7 @@ describe('Stage0AggregatorService', () => {
     // but we send another message. This should clear and restart the hard cap.
     mockRedisService.exists.mockResolvedValue(false);
     await service.aggregateMessage('user1', 'session1', { content: 'm2' }, SessionType.PERSISTENT);
-    
+
     expect(mockRedisService.set).toHaveBeenCalledTimes(2); // Debounce set twice
   });
 
@@ -176,69 +215,92 @@ describe('Stage0AggregatorService', () => {
   describe('Preemption', () => {
     it('should create AbortSignal when flushing', async () => {
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
-      
+
       await service.flushBuffer('user1', 'session1', SessionType.PERSISTENT);
-      
-      expect(eventEmitter.emit).toHaveBeenCalledWith('stage0.aggregated', expect.objectContaining({
-        signal: expect.any(Object),
-      }));
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'stage0.aggregated',
+        expect.objectContaining({
+          signal: expect.any(Object),
+        }),
+      );
     });
 
     it('should abort previous pipeline if new message arrives within limit', async () => {
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', 'session1', SessionType.PERSISTENT);
-      
-      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+
+      const { signal } = (eventEmitter.emit as jest.Mock).mock.calls[0][1];
 
       mockRedisService.exists.mockResolvedValue(false);
       mockRedisService.get.mockResolvedValue('normal');
-      
-      await service.aggregateMessage('user1', 'session1', { content: 'new msg' }, SessionType.PERSISTENT);
-      
+
+      await service.aggregateMessage(
+        'user1',
+        'session1',
+        { content: 'new msg' },
+        SessionType.PERSISTENT,
+      );
+
       expect(signal.aborted).toBe(true);
     });
 
     it('should NOT abort if limiter is active and vibe is normal', async () => {
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', 'session1', SessionType.PERSISTENT);
-      
+
       (service as any).preemptCounts.set('user1', 2);
-      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+      const { signal } = (eventEmitter.emit as jest.Mock).mock.calls[0][1];
 
       mockRedisService.exists.mockResolvedValue(false);
       mockRedisService.get.mockResolvedValue('normal');
-      
-      await service.aggregateMessage('user1', 'session1', { content: 'new msg' }, SessionType.PERSISTENT);
-      
+
+      await service.aggregateMessage(
+        'user1',
+        'session1',
+        { content: 'new msg' },
+        SessionType.PERSISTENT,
+      );
+
       expect(signal.aborted).toBe(false);
     });
 
     it('should bypass limiter if vibe is extreme', async () => {
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', 'session1', SessionType.PERSISTENT);
-      
+
       (service as any).preemptCounts.set('user1', 2);
-      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+      const { signal } = (eventEmitter.emit as jest.Mock).mock.calls[0][1];
 
       mockRedisService.exists.mockResolvedValue(false);
       mockRedisService.get.mockResolvedValue('extreme');
-      
-      await service.aggregateMessage('user1', 'session1', { content: 'new msg' }, SessionType.PERSISTENT);
-      
+
+      await service.aggregateMessage(
+        'user1',
+        'session1',
+        { content: 'new msg' },
+        SessionType.PERSISTENT,
+      );
+
       expect(signal.aborted).toBe(true);
     });
 
     it('should handle redis failure during preemption check', async () => {
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', 'session1', SessionType.PERSISTENT);
-      
-      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+
+      const { signal } = (eventEmitter.emit as jest.Mock).mock.calls[0][1];
 
       mockRedisService.exists.mockResolvedValue(false);
       mockRedisService.get.mockRejectedValue(new Error('Redis down'));
-      
-      await service.aggregateMessage('user1', 'session1', { content: 'new msg' }, SessionType.PERSISTENT);
-      
+
+      await service.aggregateMessage(
+        'user1',
+        'session1',
+        { content: 'new msg' },
+        SessionType.PERSISTENT,
+      );
+
       // Should still abort if count < 2
       expect(signal.aborted).toBe(true);
     });
@@ -246,15 +308,20 @@ describe('Stage0AggregatorService', () => {
     it('should NOT abort during redis failure if limiter is reached', async () => {
       mockRedisService.lrange.mockResolvedValue([JSON.stringify({ content: 'hi', timestamp: '' })]);
       await service.flushBuffer('user1', 'session1', SessionType.PERSISTENT);
-      
-      const signal = (eventEmitter.emit as jest.Mock).mock.calls[0][1].signal;
+
+      const { signal } = (eventEmitter.emit as jest.Mock).mock.calls[0][1];
       (service as any).preemptCounts.set('user1', 2);
 
       mockRedisService.exists.mockResolvedValue(false);
       mockRedisService.get.mockRejectedValue(new Error('Redis down'));
-      
-      await service.aggregateMessage('user1', 'session1', { content: 'new msg' }, SessionType.PERSISTENT);
-      
+
+      await service.aggregateMessage(
+        'user1',
+        'session1',
+        { content: 'new msg' },
+        SessionType.PERSISTENT,
+      );
+
       expect(signal.aborted).toBe(false);
     });
 

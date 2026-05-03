@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AcePipelineService } from './ace-pipeline.service';
 import { Stage1PerceptionService } from './stages/stage1-perception/stage1-perception.service';
 import { IdentityService } from './stages/stage1-perception/identity.service';
 import { CrisisService } from './stages/stage1-perception/crisis.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SessionType } from '../chat/dto/message.dto';
 import { PerceptionMiddleware } from './middleware/perception.middleware';
 
@@ -85,12 +85,18 @@ describe('AcePipelineService', () => {
 
     await service.handleAggregatedBlock(payload as any);
 
-    expect(eventEmitter.emit).toHaveBeenCalledWith('pipeline.security_override', expect.objectContaining({
-      userId: 'user1',
-      content: expect.any(String),
-    }));
-    
+    expect(eventEmitter.emit).toHaveBeenCalledWith(
+      'pipeline.security_override',
+      expect.objectContaining({
+        userId: 'user1',
+        content: expect.any(String),
+      }),
+    );
+
     // Should NOT continue to other paths
-    expect(eventEmitter.emit).not.toHaveBeenCalledWith('pipeline.completed', expect.objectContaining({ status: 'failed' }));
+    expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+      'pipeline.completed',
+      expect.objectContaining({ status: 'failed' }),
+    );
   });
 });

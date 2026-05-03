@@ -39,7 +39,7 @@ describe('LlmOrchestrator', () => {
     groqProvider = module.get(GroqProvider);
     geminiProvider = module.get(GeminiProvider);
     redisService = module.get(RedisService);
-    
+
     // Manually call onModuleInit as Nest doesn't do it automatically in tests unless using app.init()
     service.onModuleInit();
   });
@@ -49,7 +49,11 @@ describe('LlmOrchestrator', () => {
   });
 
   it('should use Groq as primary and succeed', async () => {
-    const mockResponse: LlmResponse = { text: 'Hello from Groq', provider: 'groq', model: 'llama-3' };
+    const mockResponse: LlmResponse = {
+      text: 'Hello from Groq',
+      provider: 'groq',
+      model: 'llama-3',
+    };
     groqProvider.generate.mockResolvedValue(mockResponse);
 
     const result = await service.generate({ userPrompt: 'hi' });
@@ -61,7 +65,11 @@ describe('LlmOrchestrator', () => {
 
   it('should failover to Gemini if Groq fails', async () => {
     groqProvider.generate.mockRejectedValue(new Error('Groq Down'));
-    const mockResponse: LlmResponse = { text: 'Hello from Gemini', provider: 'gemini', model: 'gemini' };
+    const mockResponse: LlmResponse = {
+      text: 'Hello from Gemini',
+      provider: 'gemini',
+      model: 'gemini',
+    };
     geminiProvider.generate.mockResolvedValue(mockResponse);
 
     const result = await service.generate({ userPrompt: 'hi' });
@@ -87,15 +95,17 @@ describe('LlmOrchestrator', () => {
       return { text: 'too late', provider: 'groq', model: 'm' };
     });
 
-    await expect(service.generate({ userPrompt: 'hi', signal: controller.signal })).rejects.toThrow('AbortError');
+    await expect(service.generate({ userPrompt: 'hi', signal: controller.signal })).rejects.toThrow(
+      'AbortError',
+    );
   });
 
   describe('embed', () => {
     it('should return cached embedding if available', async () => {
       redisService.get.mockResolvedValue(JSON.stringify([1, 2, 3]));
-      
+
       const result = await service.embed('test text');
-      
+
       expect(result).toEqual([1, 2, 3]);
       expect(redisService.get).toHaveBeenCalled();
       expect(geminiProvider.embed).not.toHaveBeenCalled();
@@ -104,9 +114,9 @@ describe('LlmOrchestrator', () => {
     it('should call provider and cache result if not in cache', async () => {
       redisService.get.mockResolvedValue(null);
       geminiProvider.embed.mockResolvedValue([4, 5, 6]);
-      
+
       const result = await service.embed('new text');
-      
+
       expect(result).toEqual([4, 5, 6]);
       expect(geminiProvider.embed).toHaveBeenCalledWith('new text');
       expect(redisService.set).toHaveBeenCalled();

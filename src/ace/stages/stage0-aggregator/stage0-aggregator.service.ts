@@ -1,22 +1,31 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { RedisService } from '../../../redis/redis.service';
 import { MessageSentDto, SessionType } from '../../../chat/dto/message.dto';
 import { AggregatedMessageBlockDto } from './dto/aggregated-message-block.dto';
-import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
 @Injectable()
 export class Stage0AggregatorService {
   private readonly logger = new Logger(Stage0AggregatorService.name);
+
   private readonly DEBOUNCE_TIME = 2500; // 2.5s
+
   private readonly HARD_CAP_TIME = 4000; // 4s
+
   private readonly MAX_MESSAGES_PER_BLOCK = 10;
+
   private readonly SUMMARIZATION_THRESHOLD_TOKENS = 800;
+
   private readonly TOKEN_ESTIMATION_RATIO = 4; // 1 token approx 4 chars
+
   private readonly BUFFER_TTL_MS = 10000; // 10s safety TTL for Redis list
-  
+
   private debounceTimers = new Map<string, NodeJS.Timeout>();
+
   private hardCapTimers = new Map<string, NodeJS.Timeout>();
+
   private activeControllers = new Map<string, AbortController>();
+
   private preemptCounts = new Map<string, number>();
 
   constructor(
@@ -26,10 +35,15 @@ export class Stage0AggregatorService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async aggregateMessage(userId: string, sessionId: string, data: MessageSentDto, sessionType: SessionType) {
+  async aggregateMessage(
+    userId: string,
+    sessionId: string,
+    data: MessageSentDto,
+    sessionType: SessionType,
+  ) {
     const bufferKey = `buffer:${userId}`;
     const debounceKey = `debounce:${userId}`;
-    
+
     // 1. Store message in Redis buffer
     const messageItem = JSON.stringify({
       content: data.content,
@@ -47,15 +61,18 @@ export class Stage0AggregatorService {
       // First message in a new block
       this.logger.log(`Starting new message block for user: ${userId}`);
       await this.redisService.set(debounceKey, 'active', this.DEBOUNCE_TIME);
-      
+
       // Set a safety TTL for the buffer list itself
       await this.redisService.expire(bufferKey, this.BUFFER_TTL_MS);
-      
+
       // Start Hard Cap timer
       if (this.hardCapTimers.has(userId)) {
         clearTimeout(this.hardCapTimers.get(userId));
       }
-      const hardCapTimer = setTimeout(() => this.flushBuffer(userId, sessionId, sessionType), this.HARD_CAP_TIME);
+      const hardCapTimer = setTimeout(
+        () => this.flushBuffer(userId, sessionId, sessionType),
+        this.HARD_CAP_TIME,
+      );
       this.hardCapTimers.set(userId, hardCapTimer);
     } else {
       // Existing block, reset debounce
@@ -73,8 +90,11 @@ export class Stage0AggregatorService {
     if (this.debounceTimers.has(userId)) {
       clearTimeout(this.debounceTimers.get(userId));
     }
-    
-    const debounceTimer = setTimeout(() => this.flushBuffer(userId, sessionId, sessionType), this.DEBOUNCE_TIME);
+
+    const debounceTimer = setTimeout(
+      () => this.flushBuffer(userId, sessionId, sessionType),
+      this.DEBOUNCE_TIME,
+    );
     this.debounceTimers.set(userId, debounceTimer);
   }
 
@@ -96,8 +116,10 @@ export class Stage0AggregatorService {
     const messagesRaw = await this.redisService.lrange(bufferKey, 0, -1);
     if (messagesRaw.length === 0) return;
 
-    const messages: { content: string; timestamp: string }[] = messagesRaw.map(m => JSON.parse(m));
-    
+    const messages: { content: string; timestamp: string }[] = messagesRaw.map((m) =>
+      JSON.parse(m),
+    );
+
     // Clear Redis
     await this.redisService.del(bufferKey);
     await this.redisService.del(debounceKey);
@@ -107,7 +129,7 @@ export class Stage0AggregatorService {
     this.activeControllers.set(userId, controller);
 
     // 4. Join content and check for Wall of Text
-    const fullContent = messages.map(m => m.content).join('\n');
+    const fullContent = messages.map((m) => m.content).join('\n');
     const estimatedTokens = fullContent.length / this.TOKEN_ESTIMATION_RATIO;
     const requiresSummarization = estimatedTokens > this.SUMMARIZATION_THRESHOLD_TOKENS;
 
@@ -123,7 +145,7 @@ export class Stage0AggregatorService {
     };
 
     this.logger.log(`Aggregated ${messages.length} messages for user: ${userId} [${sessionType}]`);
-    
+
     // Emit event for Stage 1 to consume
     this.eventEmitter.emit('stage0.aggregated', aggregatedBlock);
   }
@@ -136,11 +158,13 @@ export class Stage0AggregatorService {
       // Get Vibe from Redis for bypass check
       const vibe = await this.redisService.get(`vibe:${userId}`);
       const isExtremeVibe = vibe === 'extreme';
-      
+
       const count = this.preemptCounts.get(userId) || 0;
 
       if (isExtremeVibe || count < 2) {
-        this.logger.log(`Preempting current pipeline for user: ${userId} (Count: ${count}, Vibe: ${vibe})`);
+        this.logger.log(
+          `Preempting current pipeline for user: ${userId} (Count: ${count}, Vibe: ${vibe})`,
+        );
         existingController.abort();
         this.activeControllers.delete(userId);
         this.preemptCounts.set(userId, count + 1);
@@ -160,12 +184,14 @@ export class Stage0AggregatorService {
   }
 
   @OnEvent('pipeline.completed')
-  handlePipelineCompleted(payload: { userId: string, status: string }) {
-    this.logger.debug(`Cleaning up pipeline resources for user: ${payload.userId} (Status: ${payload.status})`);
-    
+  handlePipelineCompleted(payload: { userId: string; status: string }) {
+    this.logger.debug(
+      `Cleaning up pipeline resources for user: ${payload.userId} (Status: ${payload.status})`,
+    );
+
     // Always delete the controller
     this.activeControllers.delete(payload.userId);
-    
+
     // Only reset the preempt count if the pipeline actually finished (success or real failure)
     // If it was aborted, we keep the count to enforce the limiter on the next message
     if (payload.status !== 'aborted') {

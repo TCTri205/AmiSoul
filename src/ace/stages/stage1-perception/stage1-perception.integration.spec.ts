@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Stage1PerceptionService } from './stage1-perception.service';
 import { CrisisService } from './crisis.service';
 import { InjectionDetectionService } from './injection-detection.service';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { SessionType } from '../../../chat/dto/message.dto';
 import { AiProviderModule } from '../../../ai-provider/ai-provider.module';
-import * as fs from 'fs';
-import * as path from 'path';
 
 describe('Stage1PerceptionService (Integration)', () => {
   let service: Stage1PerceptionService;
   const datasetPath = path.join(__dirname, '../../../../test/datasets/perception-eval.json');
-  
+
   // Load dataset
   const dataset = JSON.parse(fs.readFileSync(datasetPath, 'utf8'));
 
@@ -28,11 +28,7 @@ describe('Stage1PerceptionService (Integration)', () => {
         }),
         AiProviderModule,
       ],
-      providers: [
-        Stage1PerceptionService,
-        CrisisService,
-        InjectionDetectionService,
-      ],
+      providers: [Stage1PerceptionService, CrisisService, InjectionDetectionService],
     }).compile();
 
     service = module.get<Stage1PerceptionService>(Stage1PerceptionService);
@@ -99,9 +95,12 @@ describe('Stage1PerceptionService (Integration)', () => {
 
         console.log(`[Case ${testCase.id}] Input: "${testCase.input}"`);
         console.log(`[Case ${testCase.id}] Raw: ${result.rawResponse}`);
-        console.log(`[Case ${testCase.id}] Intent: ${intentCorrect ? '✅' : '❌'} (Actual: ${result.perception.intent}, Expected: ${testCase.expected.intent})`);
-        console.log(`[Case ${testCase.id}] Crisis: ${crisisCorrect ? '✅' : '❌'} (Actual: ${result.perception.is_crisis}, Expected: ${testCase.expected.is_crisis})`);
-
+        console.log(
+          `[Case ${testCase.id}] Intent: ${intentCorrect ? '✅' : '❌'} (Actual: ${result.perception.intent}, Expected: ${testCase.expected.intent})`,
+        );
+        console.log(
+          `[Case ${testCase.id}] Crisis: ${crisisCorrect ? '✅' : '❌'} (Actual: ${result.perception.is_crisis}, Expected: ${testCase.expected.is_crisis})`,
+        );
       } catch (error) {
         console.error(`[Case ${testCase.id}] Failed: ${error.message}`);
         results.push({
@@ -112,7 +111,7 @@ describe('Stage1PerceptionService (Integration)', () => {
       }
 
       // Add a significant delay to stay within 5 RPM (12s interval) quota, 15s for extra safety
-      await new Promise(resolve => setTimeout(resolve, 15000));
+      await new Promise((resolve) => setTimeout(resolve, 15000));
     }
 
     const intentAccuracy = (totalIntentCorrect / dataset.length) * 100;

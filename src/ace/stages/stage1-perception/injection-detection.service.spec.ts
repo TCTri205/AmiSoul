@@ -50,7 +50,8 @@ describe('InjectionDetectionService', () => {
     });
 
     it('should detect suspicious Base64-like strings', () => {
-      const longBase64 = 'SGVsbG8gd29ybGQhIFRoaXMgaXMgYSB0ZXN0IG9mIGEgdmVyeSBsb25nIGJhc2U2NCBzdHJpbmcgdGhhdCBtaWdodCBiZSBhIHBheWxvYWQ=';
+      const longBase64 =
+        'SGVsbG8gd29ybGQhIFRoaXMgaXMgYSB0ZXN0IG9mIGEgdmVyeSBsb25nIGJhc2U2NCBzdHJpbmcgdGhhdCBtaWdodCBiZSBhIHBheWxvYWQ=';
       // Doubling it to make it long enough to trigger the 40+ char rule
       const result = service.detect(`Please decode this: ${longBase64}${longBase64}`);
       expect(result.detected).toBe(true);

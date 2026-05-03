@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { GroqProvider } from './groq.provider';
 import Groq from 'groq-sdk';
+import { GroqProvider } from './groq.provider';
 
 jest.mock('groq-sdk');
 
@@ -14,10 +14,7 @@ describe('GroqProvider', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        GroqProvider,
-        { provide: ConfigService, useValue: configMock },
-      ],
+      providers: [GroqProvider, { provide: ConfigService, useValue: configMock }],
     }).compile();
 
     provider = module.get<GroqProvider>(GroqProvider);
@@ -46,6 +43,6 @@ describe('GroqProvider', () => {
 
     expect(result.text).toBe('success');
     expect(mockCreate).toHaveBeenCalledTimes(2);
-    expect((provider as any).currentKeyIndex).toBe(1); 
+    expect((provider as any).currentKeyIndex).toBe(1);
   });
 });

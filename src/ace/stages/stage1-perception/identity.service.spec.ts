@@ -15,10 +15,7 @@ describe('IdentityService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        IdentityService,
-        { provide: RedisService, useValue: mockRedisService },
-      ],
+      providers: [IdentityService, { provide: RedisService, useValue: mockRedisService }],
     }).compile();
 
     service = module.get<IdentityService>(IdentityService);
@@ -54,7 +51,10 @@ describe('IdentityService', () => {
       sessionId: 'session1',
       messages: [
         { content: 'Hello', timestamp: new Date(2000, 1, 1, 10, 0, 0).toISOString() },
-        { content: 'Very fast message block', timestamp: new Date(2000, 1, 1, 10, 0, 1).toISOString() },
+        {
+          content: 'Very fast message block',
+          timestamp: new Date(2000, 1, 1, 10, 0, 1).toISOString(),
+        },
       ],
       fullContent: 'Hello. Very fast message block.',
       sessionType: SessionType.PERSISTENT,
@@ -84,7 +84,7 @@ describe('IdentityService', () => {
         { content: 'Word', timestamp: new Date(2000, 1, 1, 10, 0, 0).toISOString() },
         { content: 'Another word here', timestamp: new Date(2000, 1, 1, 10, 0, 2).toISOString() },
       ],
-      fullContent: 'Word. Another word here.', 
+      fullContent: 'Word. Another word here.',
       sessionType: SessionType.PERSISTENT,
       requiresSummarization: false,
       aggregatedAt: new Date().toISOString(),
@@ -118,10 +118,10 @@ describe('IdentityService', () => {
     };
 
     await service.updateSignature('user1', payload);
-    
+
     expect(mockRedisService.set).toHaveBeenCalledWith(
       expect.stringContaining('user1'),
-      expect.stringContaining('"message":2') // 'message' word count increased
+      expect.stringContaining('"message":2'), // 'message' word count increased
     );
   });
 });
