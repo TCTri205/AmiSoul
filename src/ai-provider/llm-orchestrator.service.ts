@@ -3,6 +3,8 @@ import CircuitBreaker from 'opossum';
 import { GeminiProvider } from './providers/gemini.provider';
 import { GroqProvider } from './providers/groq.provider';
 import { ILlmProvider, LlmRequest, LlmResponse } from './interfaces/llm-provider.interface';
+import { RedisService } from '../redis/redis.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class LlmOrchestrator implements OnModuleInit {
@@ -12,6 +14,7 @@ export class LlmOrchestrator implements OnModuleInit {
   constructor(
     private readonly groqProvider: GroqProvider,
     private readonly geminiProvider: GeminiProvider,
+    private readonly redisService: RedisService,
   ) {}
 
   onModuleInit() {
@@ -71,8 +74,29 @@ export class LlmOrchestrator implements OnModuleInit {
   }
 
   async embed(text: string): Promise<number[]> {
+    const hash = crypto.createHash('sha256').update(text).digest('hex');
+    const cacheKey = `embedding:cache:${hash}`;
+
+    try {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) {
+        this.logger.log('Returning cached embedding');
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to read embedding cache: ${error.message}`);
+    }
+
     if (this.geminiProvider.embed) {
-      return this.geminiProvider.embed(text);
+      const embedding = await this.geminiProvider.embed(text);
+      
+      try {
+        await this.redisService.set(cacheKey, JSON.stringify(embedding), 24 * 60 * 60 * 1000); // 24h cache
+      } catch (error) {
+        this.logger.warn(`Failed to write embedding cache: ${error.message}`);
+      }
+
+      return embedding;
     }
     throw new Error('Embedding provider not available');
   }

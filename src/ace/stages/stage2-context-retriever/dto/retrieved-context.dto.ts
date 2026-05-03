@@ -22,11 +22,16 @@ export class RetrievedContextDto {
   calEvents: CalEvent[];
   bondingScore: number;
   sessionVibe: string;
+  personaShield: string;
+  userPersonaModel: any;
   
   // Budget tracking for Stage 3
   tokenEstimates: {
+    persona: number;
+    vibe: number;
     memories: number;
     cal: number;
     history: number;
+    dpe: number;
   };
 }

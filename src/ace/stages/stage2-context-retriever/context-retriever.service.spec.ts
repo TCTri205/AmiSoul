@@ -87,7 +87,7 @@ describe('ContextRetrieverService', () => {
       ];
       
       prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
-      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50 } as any);
+      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: { traits: ['warm'] } } as any);
       redis.get.mockImplementation(async (key) => {
         if (key === 'vibe:user-1') return 'positive';
         if (key === 'cal:expectations:user-1') return JSON.stringify([{ event: 'Meeting' }]);
@@ -102,6 +102,34 @@ describe('ContextRetrieverService', () => {
       expect(result.calEvents[0].event).toBe('Meeting');
       expect(result.bondingScore).toBe(50);
       expect(result.sessionVibe).toBe('positive');
+      expect(result.personaShield).toBeDefined();
+      expect(result.userPersonaModel).toEqual({ traits: ['warm'] });
+      expect(result.tokenEstimates.persona).toBeGreaterThan(0);
+      expect(result.tokenEstimates.dpe).toBeGreaterThan(0);
+    });
+
+    it('should truncate memories that exceed the 800 token budget', async () => {
+      orchestrator.embed.mockResolvedValue([0.1]);
+      
+      // Create 10 large memories (each approx 100 tokens = 400 chars)
+      const mockMemories = Array.from({ length: 10 }, (_, i) => ({
+        id: `mem-${i}`,
+        content: 'A'.repeat(400), 
+        similarity: 0.9,
+        createdAt: new Date(),
+        metadata: { type: 'episodic' },
+      }));
+      
+      prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
+      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: {} } as any);
+      redis.get.mockResolvedValue('neutral');
+
+      const result = await service.retrieve(context);
+
+      // 800 tokens budget / 100 tokens per memory = 8 memories
+      expect(result.memories.length).toBeLessThan(10);
+      expect(result.memories.length).toBeGreaterThan(5); 
+      expect(result.tokenEstimates.memories).toBeLessThanOrEqual(800);
     });
 
     it('should filter memories for strangers (bonding <= 20)', async () => {

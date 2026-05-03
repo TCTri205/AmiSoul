@@ -21,6 +21,7 @@ model User {
   memories     Memory[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  dpe          Json?     @map("dpe")
 
   @@map("users")
 }
