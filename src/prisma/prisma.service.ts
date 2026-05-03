@@ -20,4 +20,27 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async onModuleDestroy() {
     await this.$disconnect();
   }
+
+  /**
+   * Search for similar memories using vector similarity.
+   * @param userId The user ID to search for memories
+   * @param vector The query vector (embedding)
+   * @param limit The maximum number of results (default 5)
+   */
+  async searchSimilarMemories(userId: string, vector: number[], limit: number = 5) {
+    const vectorString = `[${vector.join(',')}]`;
+
+    return this.$queryRaw<any[]>`
+      SELECT 
+        id, 
+        content, 
+        metadata, 
+        created_at as "createdAt",
+        1 - (embedding <=> ${vectorString}::vector) as similarity
+      FROM memories
+      WHERE user_id = ${userId}
+      ORDER BY similarity DESC
+      LIMIT ${limit};
+    `;
+  }
 }
