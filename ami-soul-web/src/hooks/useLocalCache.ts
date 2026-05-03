@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { useChatStore } from '@/store/useChatStore';
 import { useVibeStore } from '@/store/useVibeStore';
 import * as cache from '@/lib/cache';
-import { Message } from '@/types/message';
 
 export const useLocalCache = () => {
   const { setMessages, messages } = useChatStore();
@@ -55,7 +54,7 @@ export const useLocalCache = () => {
     return () => clearTimeout(timeoutId);
   }, [messages]);
 
-  const queueMessage = async (content: string, metadata?: Record<string, any>) => {
+  const queueMessage = async (content: string, metadata?: Record<string, unknown>) => {
     const queuedMessage: cache.QueuedMessage = {
       content,
       metadata,

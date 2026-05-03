@@ -70,7 +70,7 @@ const InputArea = () => {
   const isOffline = connectionStatus !== 'connected';
 
   return (
-    <div className="sticky bottom-0 w-full p-4 bg-transparent z-20">
+    <div className="sticky bottom-0 w-full p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-transparent z-20">
       {replyToMessage && (
         <ReplyPreview 
           message={replyToMessage} 
@@ -79,7 +79,7 @@ const InputArea = () => {
       )}
       
       <div className="flex items-end gap-2 bg-white/20 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl p-2 shadow-lg">
-        <button className="p-2 hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group">
+        <button className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group" aria-label="Thêm tệp đính kèm">
           <Plus className="w-5 h-5 text-foreground/60 group-hover:text-foreground/90" />
         </button>
 
@@ -90,6 +90,7 @@ const InputArea = () => {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Trò chuyện với Ami..."
+          aria-label="Nội dung tin nhắn"
           className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 text-sm max-h-[120px] placeholder:text-foreground/40 scrollbar-none"
         />
 
@@ -98,8 +99,9 @@ const InputArea = () => {
             <button
               onClick={handleSend}
               disabled={isDisabled}
+              aria-label="Gửi tin nhắn"
               className={cn(
-                "p-2 rounded-xl transition-all",
+                "p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl transition-all",
                 isDisabled 
                   ? "bg-foreground/10 text-foreground/30 cursor-not-allowed" 
                   : isOffline
@@ -110,7 +112,7 @@ const InputArea = () => {
               <Send className="w-4 h-4" />
             </button>
           ) : (
-            <button className="p-2 hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group">
+            <button className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group" aria-label="Ghi âm tin nhắn">
               <Mic className="w-5 h-5 text-foreground/60 group-hover:text-foreground/90" />
             </button>
           )}

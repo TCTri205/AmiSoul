@@ -23,8 +23,8 @@ const Header = () => {
   }[connectionStatus] || 'Đang kết nối...';
 
   return (
-    <header className="h-12 flex items-center justify-between px-4 bg-white/10 dark:bg-black/10 backdrop-blur-md border-b border-white/10 z-20">
-      <div className="flex items-center gap-2">
+    <header className="min-h-12 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] bg-white/10 dark:bg-black/10 backdrop-blur-md border-b border-white/10 z-20">
+      <div className="flex items-center gap-2 py-2">
         <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-xs shadow-inner">
           A
         </div>
@@ -45,7 +45,8 @@ const Header = () => {
 
       <button 
         onClick={() => toggleSettings()}
-        className="p-2 hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group"
+        className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group"
+        aria-label="Cài đặt"
       >
         <Settings className="w-5 h-5 text-foreground/60 group-hover:text-foreground/90" />
       </button>

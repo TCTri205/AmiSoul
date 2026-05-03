@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { useUIStore } from '@/store/useUIStore';
 import { Button } from '@/components/ui/button';
-import { Bell, Volume2, Smartphone } from 'lucide-react';
+import { Volume2, Smartphone } from 'lucide-react';
 
 const SettingsDialog = () => {
   const { 
@@ -45,8 +45,9 @@ const SettingsDialog = () => {
             </div>
             <Button 
               variant={isHapticsEnabled ? "default" : "outline"}
-              size="sm"
+              size="lg"
               onClick={() => setHaptics(!isHapticsEnabled)}
+              className="min-w-[80px]"
             >
               {isHapticsEnabled ? "Bật" : "Tắt"}
             </Button>
@@ -64,8 +65,9 @@ const SettingsDialog = () => {
             </div>
             <Button 
               variant={isSoundEnabled ? "default" : "outline"}
-              size="sm"
+              size="lg"
               onClick={() => setSound(!isSoundEnabled)}
+              className="min-w-[80px]"
             >
               {isSoundEnabled ? "Bật" : "Tắt"}
             </Button>

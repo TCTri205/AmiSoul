@@ -7,7 +7,7 @@ const DB_VERSION = 1;
 export interface QueuedMessage {
   id?: number;
   content: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   timestamp: number;
 }
 

@@ -56,15 +56,22 @@ const MessageBubble = ({
     <motion.div
       initial={isUser ? { opacity: 0, y: 10 } : { opacity: 0, x: -10 }}
       animate={{ opacity: 1, y: 0, x: 0 }}
-      transition={{ duration: isUser ? 0.1 : 0.15 }}
+      transition={{ 
+        type: "spring",
+        stiffness: 400,
+        damping: 30,
+        mass: 0.8,
+        duration: isUser ? 0.1 : 0.15 
+      }}
       className={cn(
         "flex flex-col max-w-[85%]",
         isUser ? "ml-auto items-end mb-6" : "mr-auto items-start mb-4"
       )}
+      aria-label={`Tin nhắn từ ${isUser ? 'bạn' : 'Ami'}: ${content || ''}`}
     >
       <div
         className={cn(
-          "relative px-4 py-3 backdrop-blur-md shadow-sm transition-all duration-500",
+          "relative px-4 py-3 backdrop-blur-md shadow-sm transition-all duration-500 overflow-hidden break-words",
           isUser 
             ? "bg-white/30 dark:bg-white/10 text-foreground rounded-2xl rounded-br-md border border-white/20 dark:border-white/10" 
             : cn(
@@ -75,7 +82,7 @@ const MessageBubble = ({
               )
         )}
       >
-        <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="prose prose-sm dark:prose-invert max-w-none break-words">
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
             components={components}

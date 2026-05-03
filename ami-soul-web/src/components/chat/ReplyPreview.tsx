@@ -33,7 +33,8 @@ const ReplyPreview = ({ message, onCancel }: ReplyPreviewProps) => {
 
       <button 
         onClick={onCancel}
-        className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+        className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+        aria-label="Hủy phản hồi"
       >
         <X className="w-4 h-4 text-foreground/50" />
       </button>

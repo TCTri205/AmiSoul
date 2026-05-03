@@ -37,10 +37,21 @@ const ChatContainer = () => {
     }
   }, [shouldAutoScroll]);
 
-  // Scroll on new messages or streaming chunks
+  // Scroll on new messages, streaming chunks, or viewport resize (keyboard)
   useEffect(() => {
     scrollToBottom(isStreaming ? 'auto' : 'smooth');
   }, [messages, streamingChunks, isStreaming, typingState, scrollToBottom]);
+
+  useEffect(() => {
+    const handleViewportResize = () => {
+      if (shouldAutoScroll) {
+        scrollToBottom('auto');
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleViewportResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleViewportResize);
+  }, [shouldAutoScroll, scrollToBottom]);
 
   const handleRetry = () => {
     // Find last user message to retry

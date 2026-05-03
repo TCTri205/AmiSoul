@@ -14,7 +14,12 @@ const TypingIndicator = ({ state, onRetry }: TypingIndicatorProps) => {
 
   if (state === 'initial') {
     return (
-      <div className="flex space-x-1 items-center px-4 py-3 bg-black/5 dark:bg-white/5 backdrop-blur-md rounded-2xl rounded-bl-md w-fit">
+      <div 
+        role="status" 
+        aria-live="polite"
+        className="flex space-x-1 items-center px-4 py-3 bg-black/5 dark:bg-white/5 backdrop-blur-md rounded-2xl rounded-bl-md w-fit"
+        aria-label="Ami đang soạn tin nhắn"
+      >
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
@@ -39,6 +44,8 @@ const TypingIndicator = ({ state, onRetry }: TypingIndicatorProps) => {
       <motion.div 
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
+        role="status"
+        aria-live="polite"
         className="text-xs text-foreground/50 italic px-4 py-2"
       >
         Ami đang suy nghĩ...
@@ -51,6 +58,8 @@ const TypingIndicator = ({ state, onRetry }: TypingIndicatorProps) => {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
+        role="alert"
+        aria-live="assertive"
         className="flex flex-col gap-2 p-4 bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-2xl rounded-bl-md max-w-[80%]"
       >
         <p className="text-sm text-red-600 dark:text-red-400">
@@ -60,6 +69,7 @@ const TypingIndicator = ({ state, onRetry }: TypingIndicatorProps) => {
           <button 
             onClick={onRetry}
             className="text-xs font-semibold text-red-700 dark:text-red-300 hover:underline w-fit"
+            aria-label="Thử gửi lại tin nhắn"
           >
             Gửi lại
           </button>

@@ -30,6 +30,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+import { SafeAreaWrapper } from "@/components/layout/SafeAreaWrapper";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,7 +41,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          "min-h-screen bg-background font-sans antialiased",
+          "min-h-screen bg-background font-sans antialiased overflow-hidden",
           inter.variable,
           roboto.variable
         )}
@@ -47,9 +49,11 @@ export default function RootLayout({
         <SocketProvider>
           <VibeBackground />
           <SettingsDialog />
-          <main className="relative z-10 flex h-[100dvh] flex-col overflow-hidden">
-            {children}
-          </main>
+          <SafeAreaWrapper>
+            <main className="relative z-10 flex flex-1 flex-col overflow-hidden">
+              {children}
+            </main>
+          </SafeAreaWrapper>
         </SocketProvider>
       </body>
     </html>
