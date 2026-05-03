@@ -22,8 +22,21 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   dpe          Json?     @map("dpe")
+  behavioralBaseline BehavioralBaseline?
 
   @@map("users")
+}
+
+model BehavioralBaseline {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  typicalActiveStart Int      @default(6)  @map("typical_active_start") // 0-23
+  typicalActiveEnd   Int      @default(22) @map("typical_active_end")   // 0-23
+  timezone          String   @default("UTC")
+  lastUpdated       DateTime @default(now()) @map("last_updated")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("behavioral_baselines")
 }
 
 model Memory {

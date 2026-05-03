@@ -87,7 +87,7 @@ describe('ContextRetrieverService', () => {
       ];
       
       prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
-      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: { traits: ['warm'] } } as any);
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50, dpe: { traits: ['warm'] } });
       redis.get.mockImplementation(async (key) => {
         if (key === 'vibe:user-1') return 'positive';
         if (key === 'cal:expectations:user-1') return JSON.stringify([{ event: 'Meeting' }]);
@@ -114,21 +114,22 @@ describe('ContextRetrieverService', () => {
       // Create 10 large memories (each approx 100 tokens = 400 chars)
       const mockMemories = Array.from({ length: 10 }, (_, i) => ({
         id: `mem-${i}`,
-        content: 'A'.repeat(400), 
+        content: 'A'.repeat(250), 
         similarity: 0.9,
         createdAt: new Date(),
         metadata: { type: 'episodic' },
       }));
       
       prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
-      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: {} } as any);
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50, dpe: {} });
       redis.get.mockResolvedValue('neutral');
 
       const result = await service.retrieve(context);
 
-      // 800 tokens budget / 100 tokens per memory = 8 memories
+      // Each memory approx (250 content + ~100 json overhead) / 4 = ~87 tokens
+      // 800 / 87 = ~9 memories
       expect(result.memories.length).toBeLessThan(10);
-      expect(result.memories.length).toBeGreaterThan(5); 
+      expect(result.memories.length).toBeGreaterThan(6); 
       expect(result.tokenEstimates.memories).toBeLessThanOrEqual(800);
     });
 
@@ -148,7 +149,7 @@ describe('ContextRetrieverService', () => {
       }));
 
       prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
-      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: {} } as any);
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50, dpe: {} });
       redis.get.mockImplementation(async (key) => {
         if (key.includes('cal:pending')) return JSON.stringify(largeCal);
         return null;
@@ -170,7 +171,7 @@ describe('ContextRetrieverService', () => {
       prisma.searchSimilarMemories.mockResolvedValue([]);
       
       const largeDpe = { traits: 'A'.repeat(1000) };
-      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: largeDpe } as any);
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50, dpe: largeDpe });
       redis.get.mockResolvedValue(null);
 
       const result = await service.retrieve(context);
@@ -199,7 +200,7 @@ describe('ContextRetrieverService', () => {
       ];
       
       prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
-      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: {} } as any);
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50, dpe: {} });
       
       // CAL event about "beach"
       redis.get.mockImplementation(async (key) => {
@@ -234,7 +235,7 @@ describe('ContextRetrieverService', () => {
       ];
       
       prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
-      prisma.user.findUnique.mockResolvedValue({ bondingScore: 10 } as any);
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 10 });
       redis.get.mockResolvedValue(null);
 
       const result = await service.retrieve(context);

@@ -32,16 +32,21 @@ export class ContextRetrieverService {
       const queryVector = await this.llmOrchestrator.embed(rawInput);
 
       // 2. Parallel fetching from various sources
+      const userPromise = this.prisma.user.findUnique({ 
+        where: { id: userId }, 
+        select: { bondingScore: true, dpe: true } 
+      });
+
       const [similarMemories, calEvents, user, currentVibe] = await Promise.all([
         this.prisma.searchSimilarMemories(userId, queryVector, 10), // Fetch 10 candidates
         this.getCalL1Events(userId),
-        this.prisma.user.findUnique({ where: { id: userId }, select: { bondingScore: true, dpe: true } }),
+        userPromise,
         this.redis.get(`vibe:${userId}`),
       ]);
 
-      const bondingScore = user?.bondingScore ?? 0;
+      const bondingScore = (user as any)?.bondingScore ?? 0;
       const vibe = currentVibe ?? 'neutral';
-      const dpeModel = user?.dpe ?? {};
+      const dpeModel = (user as any)?.dpe ?? {};
 
       // 3. Rank memories using Affective Retrieval formula
       const rankedMemories = this.rankMemories(similarMemories, vibe, calEvents);
@@ -201,7 +206,7 @@ export class ContextRetrieverService {
       let calRelevance = 0;
       if (calKeywords.size > 0) {
         const memoryWords = memory.content.toLowerCase().split(/\s+/);
-        const matches = memoryWords.filter(w => calKeywords.has(w)).length;
+        const matches = memoryWords.filter((w: string) => calKeywords.has(w)).length;
         calRelevance = Math.min(1.0, matches / 3); // Max boost at 3 matches
       }
 

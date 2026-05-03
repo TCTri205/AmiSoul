@@ -107,6 +107,16 @@ describe('PerceptionMiddleware', () => {
       };
       expect((middleware as any).determineRouting(perception)).toBe('full');
     });
+
+    it('should route to full path if timestamp_flag is a string (Time Anomaly)', () => {
+      const perception: Partial<PerceptionResultDto> = {
+        complexity: 3,
+        routing_confidence: 0.95,
+        urgency: 1,
+        timestamp_flag: 'Late_Night',
+      };
+      expect((middleware as any).determineRouting(perception)).toBe('full');
+    });
   });
 
   describe('transform', () => {

@@ -4,6 +4,7 @@ import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-m
 import { SessionType } from '../../../chat/dto/message.dto';
 import { CrisisService } from './crisis.service';
 import { InjectionDetectionService } from './injection-detection.service';
+import { TimeAnomalyService } from './time-anomaly.service';
 import { LlmOrchestrator } from '../../../ai-provider/llm-orchestrator.service';
 
 describe('Stage1PerceptionService', () => {
@@ -30,6 +31,12 @@ describe('Stage1PerceptionService', () => {
           provide: InjectionDetectionService,
           useValue: {
             detect: jest.fn().mockReturnValue({ detected: false, confidence: 0 }),
+          },
+        },
+        {
+          provide: TimeAnomalyService,
+          useValue: {
+            checkAnomaly: jest.fn().mockResolvedValue(false),
           },
         },
       ],
@@ -139,6 +146,34 @@ describe('Stage1PerceptionService', () => {
 
       await expect(service.process(payload, controller.signal))
         .rejects.toThrow('AbortError');
+    });
+
+    it('should boost complexity and set timestamp_flag when Time Anomaly is detected', async () => {
+      const mockTimeAnomalyService = (service as any).timeAnomalyService;
+      mockTimeAnomalyService.checkAnomaly.mockResolvedValue('Late_Night');
+
+      const mockResult = {
+        intent: 'greeting',
+        sentiment: 'neutral',
+        complexity: 5,
+        urgency: 5,
+        identity_anomaly: false,
+        routing_confidence: 0.9,
+        sarcasm_hint: false,
+        timestamp_flag: false,
+        noise_flag: false,
+      };
+
+      orchestrator.generate.mockResolvedValue({
+        text: JSON.stringify(mockResult),
+        provider: 'groq',
+        model: 'llama3',
+      });
+
+      const result = await service.process(payload);
+
+      expect(result.perception.timestamp_flag).toBe('Late_Night');
+      expect(result.perception.complexity).toBe(7); // 5 + 2
     });
   });
 });

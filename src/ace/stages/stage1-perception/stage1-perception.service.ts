@@ -3,6 +3,7 @@ import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-m
 import { PerceptionResultDto } from './dto/perception-result.dto';
 import { CrisisService } from './crisis.service';
 import { InjectionDetectionService } from './injection-detection.service';
+import { TimeAnomalyService } from './time-anomaly.service';
 import { LlmOrchestrator } from '../../../ai-provider/llm-orchestrator.service';
 
 export interface Stage1Response {
@@ -18,6 +19,7 @@ export class Stage1PerceptionService {
   constructor(
     private readonly crisisService: CrisisService,
     private readonly injectionService: InjectionDetectionService,
+    private readonly timeAnomalyService: TimeAnomalyService,
     private readonly llmOrchestrator: LlmOrchestrator,
   ) { }
 
@@ -31,6 +33,12 @@ export class Stage1PerceptionService {
     // Heuristic Injection Detection (T2.5)
     const injectionHeuristic = this.injectionService.detect(payload.fullContent);
     const isInjectionHeuristic = injectionHeuristic.detected && injectionHeuristic.confidence > 0.8;
+
+    // Time Anomaly Detection (T3.5)
+    const lastMessageTimestamp = payload.messages[payload.messages.length - 1]?.timestamp 
+      ? new Date(payload.messages[payload.messages.length - 1].timestamp)
+      : new Date();
+    const timeAnomaly = await this.timeAnomalyService.checkAnomaly(payload.userId, lastMessageTimestamp);
 
     try {
       // The orchestrator handles retries and failovers
@@ -51,12 +59,12 @@ export class Stage1PerceptionService {
         perception: {
           intent: 'unknown',
           sentiment: 'neutral',
-          complexity: 5,
+          complexity: timeAnomaly ? 7 : 5,
           urgency: (isCrisis || isInjectionHeuristic) ? 10 : 5,
           identity_anomaly: false,
           routing_confidence: 0,
           sarcasm_hint: false,
-          timestamp_flag: false,
+          timestamp_flag: timeAnomaly || false,
           noise_flag: false,
           is_crisis: isCrisis,
           is_injection: isInjectionHeuristic,
@@ -149,6 +157,19 @@ export class Stage1PerceptionService {
 
         if (perception.is_crisis || perception.is_injection) {
           perception.urgency = 10;
+        }
+
+        // 5. Time Anomaly Post-processing (T3.5)
+        const lastMessageTimestamp = payload.messages[payload.messages.length - 1]?.timestamp 
+          ? new Date(payload.messages[payload.messages.length - 1].timestamp)
+          : new Date();
+        const timeAnomaly = await this.timeAnomalyService.checkAnomaly(payload.userId, lastMessageTimestamp);
+        
+        if (timeAnomaly) {
+          perception.timestamp_flag = timeAnomaly;
+          // Boost complexity by +2, capped at 10
+          perception.complexity = Math.min((perception.complexity || 5) + 2, 10);
+          this.logger.debug(`Time Anomaly Detected (${timeAnomaly}). Complexity boosted to ${perception.complexity}`);
         }
 
         return { perception, rawResponse: text };

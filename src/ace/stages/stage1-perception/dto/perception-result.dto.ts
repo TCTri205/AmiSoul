@@ -6,7 +6,7 @@ export class PerceptionResultDto {
   identity_anomaly: boolean;
   routing_confidence: number; // 0.0 - 1.0
   sarcasm_hint: boolean;
-  timestamp_flag: boolean;
+  timestamp_flag: boolean | string;
   noise_flag: boolean;
   is_crisis: boolean;
   is_injection: boolean;

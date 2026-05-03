@@ -113,10 +113,13 @@ export class PerceptionMiddleware {
     const confidence = perception.routing_confidence ?? 0;
     const urgency = perception.urgency ?? 5;
 
+    const isTimeAnomaly = typeof perception.timestamp_flag === 'string';
+
     const isComplex = 
       complexity > 7 || 
       confidence < 0.85 || 
-      urgency > 8;
+      urgency > 8 ||
+      isTimeAnomaly;
 
     return isComplex ? 'full' : 'fast';
   }

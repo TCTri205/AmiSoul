@@ -57,7 +57,7 @@ export class LlmOrchestrator implements OnModuleInit {
 
       try {
         this.logger.log(`Attempting generation with provider: ${provider.name}`);
-        return await breaker.fire(request);
+        return await breaker.fire(request) as LlmResponse;
       } catch (error) {
         lastError = error;
 
