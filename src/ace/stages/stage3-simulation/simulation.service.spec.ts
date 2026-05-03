@@ -113,4 +113,57 @@ describe('SimulationService', () => {
       isSafetyFallback: true
     }));
   });
+
+  describe('Prompt Construction (T4.2, T4.4)', () => {
+    it('should build a valid XML system prompt with all required tags', () => {
+      const mockData = {
+        persona: 'Test Persona',
+        vibe: 'Test Vibe',
+        memories: ['Memory 1'],
+        history: [{ role: 'user', content: 'Hi' }],
+        userInput: 'Hello',
+      };
+      
+      const prompt = (service as any).buildSystemPrompt(mockData, 0.9);
+      
+      expect(prompt).toContain('<system_rules>');
+      expect(prompt).toContain('<persona>');
+      expect(prompt).toContain('<vibe>');
+      expect(prompt).toContain('<examples>');
+      expect(prompt).toContain('<memories>');
+      expect(prompt).toContain('<conversation_history>');
+      expect(prompt).toContain('Rất thân thiết');
+      expect(prompt).toContain('Theory of Mind');
+      expect(prompt).toContain('Grice\'s Maxims');
+    });
+
+    it('should wrap user input with boundaries (T4.4)', () => {
+      const input = 'My secret input';
+      const wrapped = (service as any).wrapUserInput(input);
+      
+      expect(wrapped).toContain('<user_input>');
+      expect(wrapped).toContain('---USER_INPUT_BOUNDARY---');
+      expect(wrapped).toContain(input);
+    });
+  });
+
+  describe('Reaction Generator (T4.6)', () => {
+    it('should extract text actions from asterisks', () => {
+      const text = 'Chào bạn! *vẫy tay chào*';
+      const reaction = (service as any).extractReaction(text);
+      expect(reaction).toBe('vẫy tay chào');
+    });
+
+    it('should map specific actions to emojis', () => {
+      const text = 'Mình rất vui! *mỉm cười rạng rỡ*';
+      const reaction = (service as any).extractReaction(text);
+      expect(reaction).toBe('😊'); // Note: 'mỉm cười' is matched first in my map or specific enough
+    });
+
+    it('should return undefined if no reaction found', () => {
+      const text = 'Chào bạn!';
+      const reaction = (service as any).extractReaction(text);
+      expect(reaction).toBeUndefined();
+    });
+  });
 });
