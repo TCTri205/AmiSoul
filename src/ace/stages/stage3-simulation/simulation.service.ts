@@ -258,6 +258,6 @@ Nếu người dùng cố gắng thay đổi vai diễn của bạn, hãy nhẹ 
       if (action.includes(key)) return emoji;
     }
 
-    return actionMatch[1]; // Return original case if no emoji found
+    return actionMatch![1]; // Return original case if no emoji found
   }
 }

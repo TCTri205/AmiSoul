@@ -1,13 +1,21 @@
 export const SOCKET_EVENTS = {
+  // Connection events (Socket.io built-in)
   CONNECT: 'connect',
   DISCONNECT: 'disconnect',
-  USER_MESSAGE: 'user_message',
-  AI_MESSAGE_CHUNK: 'ai_message_chunk',
-  AI_MESSAGE_END: 'ai_message_end',
-  VIBE_UPDATE: 'vibe_update',
-  ERROR: 'error',
-  INTERRUPT: 'interrupt',
-  PROCESSING_START: 'processing_start',
+  CONNECT_ERROR: 'connect_error',
+  RECONNECT_ATTEMPT: 'reconnect_attempt',
+
+  // Server -> Client
+  STREAM_CHUNK: 'stream_chunk',      // Streaming AI response
+  STREAM_END: 'stream_end',           // Streaming AI response completed
+  VIBE_UPDATE: 'vibe_update',         // Session vibe change
+  PROCESSING_START: 'processing_start', // AI started thinking
+  ERROR: 'error',                     // Generic error
+
+  // Client -> Server
+  MESSAGE_SENT: 'message_sent',       // User sends a message
+  INTERRUPT: 'interrupt',             // User interrupts AI stream
+  MESSAGE_REACTION: 'message_reaction', // User reacts to message
 } as const;
 
 export type SocketEvent = typeof SOCKET_EVENTS[keyof typeof SOCKET_EVENTS];

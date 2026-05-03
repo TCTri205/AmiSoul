@@ -10,7 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService } from '../auth/auth.service';
 import { MessageSentDto, SessionType } from './dto/message.dto';
 
@@ -31,6 +31,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   constructor(
     private readonly authService: AuthService,
     private readonly aggregatorService: Stage0AggregatorService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   afterInit(server: Server) {
@@ -111,7 +112,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     this.logger.log(`Broadcasting processing status for user: ${payload.userId}`);
 
     // Notify the user that AmiSoul is processing the aggregated block
-    this.server.to(`user:${payload.userId}`).emit('processing_started', {
+    this.server.to(`user:${payload.userId}`).emit('processing_start', {
       message_count: payload.messages.length,
       session_type: payload.sessionType,
       timestamp: new Date().toISOString(),
@@ -158,7 +159,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     provider?: string;
     model?: string;
   }) {
-    this.server.to(`user:${payload.userId}`).emit('ai_response_chunk', {
+    this.server.to(`user:${payload.userId}`).emit('stream_chunk', {
       content: payload.chunk,
       is_complete: payload.isComplete,
       metadata: {
@@ -171,10 +172,34 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   @OnEvent('simulation.completed')
   handleSimulationCompleted(payload: { userId: string; result: any }) {
-    this.server.to(`user:${payload.userId}`).emit('ai_response_completed', {
+    this.server.to(`user:${payload.userId}`).emit('stream_end', {
       ...payload.result,
       timestamp: new Date().toISOString(),
     });
+  }
+
+  @OnEvent('vibe.update')
+  handleVibeUpdate(payload: { userId: string; vibe: string }) {
+    this.server.to(`user:${payload.userId}`).emit('vibe_update', {
+      vibe: payload.vibe,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  @SubscribeMessage('interrupt')
+  handleInterrupt(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+    const { user } = client as any;
+    this.logger.warn(`Interrupt received from user ${user.id}`);
+    // Trigger preemption logic (T1.6)
+    this.eventEmitter.emit('pipeline.interrupt', { userId: user.id, ...data });
+  }
+
+  @SubscribeMessage('message_reaction')
+  handleReaction(@ConnectedSocket() client: Socket, @MessageBody() data: { messageId: string; emoji: string }) {
+    const { user } = client as any;
+    this.logger.log(`Reaction received from user ${user.id} for message ${data.messageId}: ${data.emoji}`);
+    // Update vibe/bonding (T4.6)
+    this.eventEmitter.emit('vibe.reaction', { userId: user.id, ...data });
   }
 
   private extractToken(client: Socket): string | null {
