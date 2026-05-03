@@ -69,4 +69,11 @@ export class LlmOrchestrator implements OnModuleInit {
 
     throw lastError || new Error('All LLM providers failed or are unavailable');
   }
+
+  async embed(text: string): Promise<number[]> {
+    if (this.geminiProvider.embed) {
+      return this.geminiProvider.embed(text);
+    }
+    throw new Error('Embedding provider not available');
+  }
 }

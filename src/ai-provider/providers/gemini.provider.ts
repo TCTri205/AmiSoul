@@ -81,6 +81,38 @@ export class GeminiProvider implements ILlmProvider {
     throw lastError;
   }
 
+  async embed(text: string): Promise<number[]> {
+    if (this.apiKeys.length === 0) {
+      throw new Error('Gemini API keys not configured');
+    }
+
+    const attempts = this.apiKeys.length;
+    let lastError: any;
+
+    for (let i = 0; i < attempts; i++) {
+      const apiKey = this.apiKeys[this.currentKeyIndex];
+      try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+        const result = await model.embedContent(text);
+        return result.embedding.values;
+      } catch (error) {
+        lastError = error;
+        
+        if (error.status === 429 || error.message?.includes('429')) {
+          this.logger.warn(`Gemini Embedding key ${this.currentKeyIndex} rate limited. Rotating...`);
+          this.rotateKey();
+          continue;
+        }
+
+        this.logger.error(`Gemini Embedding error with key ${this.currentKeyIndex}: ${error.message}`);
+        this.rotateKey();
+      }
+    }
+
+    throw lastError;
+  }
+
   private rotateKey() {
     this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
   }

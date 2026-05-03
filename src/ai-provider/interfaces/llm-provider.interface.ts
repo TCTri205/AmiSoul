@@ -21,4 +21,5 @@ export interface LlmResponse {
 export interface ILlmProvider {
   readonly name: string;
   generate(request: LlmRequest): Promise<LlmResponse>;
+  embed?(text: string): Promise<number[]>;
 }

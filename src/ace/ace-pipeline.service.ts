@@ -8,6 +8,7 @@ import { CrisisService } from './stages/stage1-perception/crisis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PerceptionMiddleware } from './middleware/perception.middleware';
 import { CognitiveContext } from './middleware/dto/cognitive-context.dto';
+import { ContextRetrieverService } from './stages/stage2-context-retriever/context-retriever.service';
 
 
 @Injectable()
@@ -16,6 +17,7 @@ export class AcePipelineService {
 
   constructor(
     private readonly stage1: Stage1PerceptionService,
+    private readonly stage2: ContextRetrieverService,
     private readonly identityService: IdentityService,
     private readonly crisisService: CrisisService,
     private readonly perceptionMiddleware: PerceptionMiddleware,
@@ -92,12 +94,14 @@ export class AcePipelineService {
     // Stage 2: Context Retrieval (CMA + CAL)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 2: Retrieving deep context for user: ${userId}`);
-    // [TODO] Call Stage 2 Service with context
+    const retrievedContext = await this.stage2.retrieve(context, signal);
+    
+    this.logger.log(`Stage 2: Successfully retrieved context for user ${userId} (${retrievedContext.memories.length} memories, ${retrievedContext.calEvents.length} CAL events)`);
 
     // Stage 3: LLM Simulation (Full Reasoning)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 3: Simulating empathetic response for user: ${userId}`);
-    // [TODO] Call Stage 3 Service with context
+    // [TODO] Call Stage 3 Service with context and retrievedContext
 
     // Stage 4: Vibe & Safety Monitor
     if (signal?.aborted) throw new Error('AbortError');
@@ -114,7 +118,8 @@ export class AcePipelineService {
     this.logger.log(`Routing user ${userId} to FAST PATH (Confidence: ${context.perception.routing_confidence})`);
 
     // Stage 2: Skip or minimal retrieval
-    this.logger.debug(`Stage 2: Skipping deep retrieval for fast path (User: ${userId})`);
+    this.logger.debug(`Stage 2: Performing minimal retrieval for fast path (User: ${userId})`);
+    const retrievedContext = await this.stage2.retrieve(context, signal); // Even fast path might need some CAL context
 
     // Stage 3: Fast Simulation (Small model or direct response)
     if (signal?.aborted) throw new Error('AbortError');
