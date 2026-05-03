@@ -14,6 +14,7 @@ export interface Message {
   reactions?: Reaction[];
   replyToId?: string;
   isCrisis?: boolean;
+  isInterrupted?: boolean;
 }
 
 export interface StreamChunk {

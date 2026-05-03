@@ -14,14 +14,17 @@ import type {
   MessageAckPayload, 
   VibeUpdatePayload, 
   AiResponsePayload,
-  SocketErrorPayload 
+  SocketErrorPayload,
+  AccountLinkSuggestionPayload
 } from '@/types/socket.types';
+import { AccountLinkSheet } from '@/components/layout/AccountLinkSheet';
 
 type SocketContextValue = {
   socket: Socket | null;
   sendMessage: (content: string, metadata?: MessageMetadata) => void;
   sendInterrupt: (payload?: { messageId?: string }) => void;
   sendReaction: (messageId: string, emoji: string) => void;
+  updateGuestToken: (token: string) => void;
 };
 
 const SocketContext = createContext<SocketContextValue | undefined>(undefined);
@@ -36,9 +39,19 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [token, setToken] = useState<string | null>(null); // In-memory token storage
+  const [showAccountLink, setShowAccountLink] = useState(false);
+  const [accountLinkData, setAccountLinkData] = useState<AccountLinkSuggestionPayload | null>(null);
+  
   const { initializeCache, queueMessage, isOffline } = useLocalCache();
   const { triggerStrong, triggerSoft } = useHapticFeedback();
   const socketRef = useRef<Socket | null>(null);
+
+  // Method to update guest token from memory
+  const updateGuestToken = useCallback((newToken: string) => {
+    console.log('[Socket] Setting guest token in memory');
+    setToken(newToken);
+  }, []);
 
   // Use refs for triggers to prevent socket reconnection when settings change
   const triggerStrongRef = useRef(triggerStrong);
@@ -58,10 +71,12 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       if (!isMounted) return;
 
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
-      const token = typeof window !== 'undefined' ? localStorage.getItem('ami_soul_token') : null;
+      
+      // Try memory token first, then localStorage (for persistent users)
+      const currentToken = token || (typeof window !== 'undefined' ? localStorage.getItem('ami_soul_token') : null);
 
       socketInstance = io(socketUrl, {
-        auth: token ? { token } : undefined,
+        auth: currentToken ? { token: currentToken } : undefined,
         query: { device_id: deviceId },
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -94,14 +109,21 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         }
       });
 
-      socketInstance.on(SOCKET_EVENTS.DISCONNECT, () => {
-        console.log('[Socket] Disconnected');
+      socketInstance.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
+        console.log('[Socket] Disconnected, reason:', reason);
         useVibeStore.getState().setConnectionStatus('disconnected');
         useVibeStore.getState().setVibe('offline');
         
         // Clear typing state on disconnect
         useChatStore.getState().clearTypingTimeouts();
         useChatStore.getState().setTypingState('none');
+
+        if (reason === 'io server disconnect' && socketInstance) {
+          // the disconnection was initiated by the server, you need to reconnect manually
+          setTimeout(() => {
+            socketInstance?.connect();
+          }, 1000);
+        }
       });
 
       socketInstance.on(SOCKET_EVENTS.RECONNECT_ATTEMPT, () => {
@@ -175,11 +197,25 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
       socketInstance.on(SOCKET_EVENTS.VIBE_UPDATE, (data: VibeUpdatePayload) => {
         useVibeStore.getState().setVibe(data.vibe);
+        if (data.bonding_score !== undefined) {
+          useVibeStore.getState().setBondingScore(data.bonding_score);
+        }
         
         // Trigger haptics for strong vibes
         if (data.vibe === 'positive' || data.vibe === 'stressed') {
           triggerSoftRef.current();
         }
+      });
+
+      socketInstance.on(SOCKET_EVENTS.GUEST_AUTH, (data: GuestAuthPayload) => {
+        console.log('[Socket] Guest auth received, saving token to memory');
+        updateGuestToken(data.token);
+      });
+
+      socketInstance.on(SOCKET_EVENTS.SUGGEST_ACCOUNT_LINK, (data: AccountLinkSuggestionPayload) => {
+        console.log('[Socket] Account link suggested:', data);
+        setAccountLinkData(data);
+        setShowAccountLink(true);
       });
 
       socketInstance.on(SOCKET_EVENTS.ERROR, (err: SocketErrorPayload) => {
@@ -199,7 +235,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         socketInstance.disconnect();
       }
     };
-  }, [initializeCache]);
+  }, [initializeCache, token, updateGuestToken]);
 
   const sendMessage = useCallback((content: string, metadata?: MessageMetadata) => {
     if (isOffline()) {
@@ -230,7 +266,18 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     sendMessage,
     sendInterrupt,
     sendReaction,
+    updateGuestToken,
   };
 
-  return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;
+  return (
+    <SocketContext.Provider value={value}>
+      {children}
+      <AccountLinkSheet 
+        open={showAccountLink} 
+        onOpenChange={setShowAccountLink}
+        bondingScore={accountLinkData?.bonding_score}
+        suggestionMessage={accountLinkData?.message}
+      />
+    </SocketContext.Provider>
+  );
 };

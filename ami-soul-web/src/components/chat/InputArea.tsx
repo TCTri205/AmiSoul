@@ -11,18 +11,29 @@ import { cn } from '@/lib/utils';
 const InputArea = () => {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { sendMessage } = useSocket();
+  const { sendMessage, sendInterrupt } = useSocket();
   const { connectionStatus } = useVibeStore();
   const { 
     replyToMessage, 
     setReplyToMessage, 
     addMessage,
     isStreaming,
-    typingState
+    typingState,
+    streamingChunks,
+    finalizeStream
   } = useChatStore();
 
   const handleSend = () => {
-    if (!text.trim() || isStreaming) return;
+    if (!text.trim()) return;
+
+    // Handle interruption/preemption
+    if (isStreaming) {
+      sendInterrupt();
+      // Optimistically finalize current streams as interrupted
+      Object.keys(streamingChunks).forEach(id => {
+        finalizeStream(id, true);
+      });
+    }
 
     const messageContent = text.trim();
     const tempId = `msg_${Date.now()}`;
@@ -66,8 +77,8 @@ const InputArea = () => {
     }
   }, [text]);
 
-  const isDisabled = !text.trim() || isStreaming || typingState === 'thinking';
   const isOffline = connectionStatus !== 'connected';
+  const isDisabled = !text.trim() || typingState === 'thinking' || isOffline;
 
   return (
     <div className="sticky bottom-0 w-full p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-transparent z-20">
@@ -79,7 +90,11 @@ const InputArea = () => {
       )}
       
       <div className="flex items-end gap-2 bg-white/20 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl p-2 shadow-lg">
-        <button className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group" aria-label="Thêm tệp đính kèm">
+        <button 
+          disabled={isOffline}
+          className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group disabled:opacity-30 disabled:cursor-not-allowed" 
+          aria-label="Thêm tệp đính kèm"
+        >
           <Plus className="w-5 h-5 text-foreground/60 group-hover:text-foreground/90" />
         </button>
 
@@ -89,9 +104,10 @@ const InputArea = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Trò chuyện với Ami..."
+          placeholder={isOffline ? "Đang đợi kết nối..." : "Trò chuyện với Ami..."}
           aria-label="Nội dung tin nhắn"
-          className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 text-sm max-h-[120px] placeholder:text-foreground/40 scrollbar-none"
+          disabled={isOffline}
+          className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2 text-sm max-h-[120px] placeholder:text-foreground/40 scrollbar-none disabled:cursor-not-allowed"
         />
 
         <div className="flex items-center gap-1">
@@ -104,15 +120,17 @@ const InputArea = () => {
                 "p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl transition-all",
                 isDisabled 
                   ? "bg-foreground/10 text-foreground/30 cursor-not-allowed" 
-                  : isOffline
-                    ? "bg-foreground/50 text-background hover:bg-foreground/60 active:scale-95"
-                    : "bg-foreground text-background hover:scale-105 active:scale-95"
+                  : "bg-foreground text-background hover:scale-105 active:scale-95"
               )}
             >
               <Send className="w-4 h-4" />
             </button>
           ) : (
-            <button className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group" aria-label="Ghi âm tin nhắn">
+            <button 
+              disabled={isOffline}
+              className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group disabled:opacity-30 disabled:cursor-not-allowed" 
+              aria-label="Ghi âm tin nhắn"
+            >
               <Mic className="w-5 h-5 text-foreground/60 group-hover:text-foreground/90" />
             </button>
           )}

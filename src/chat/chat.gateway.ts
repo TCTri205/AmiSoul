@@ -85,6 +85,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
     // Join a room for the user to easily send messages back to all their devices
     client.join(`user:${user.id}`);
+
+    // If guest and NO token was provided in handshake, send a JWT for memory-only storage (T5.9)
+    const hasToken = !!this.extractToken(client);
+    if (user.isGuest && !hasToken) {
+      this.authService.generateToken(user).then((token) => {
+        client.emit('guest_auth', { token });
+      });
+    }
   }
 
   handleDisconnect(client: Socket) {

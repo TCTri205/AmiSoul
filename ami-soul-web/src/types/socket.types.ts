@@ -30,6 +30,7 @@ export interface MessageAckPayload {
 
 export interface VibeUpdatePayload {
   vibe: SessionVibe;
+  bonding_score?: number;
   timestamp: string;
 }
 
@@ -45,4 +46,13 @@ export interface SocketErrorPayload {
   message: string;
   code?: string;
   [key: string]: unknown;
+}
+
+export interface AccountLinkSuggestionPayload {
+  bonding_score: number;
+  message: string;
+}
+
+export interface GuestAuthPayload {
+  token: string;
 }

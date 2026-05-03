@@ -11,7 +11,14 @@ import { RedisService } from './redis.service';
       provide: 'REDIS_CLIENT',
       useFactory: (configService: ConfigService) => {
         const redisUrl = configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
-        return new Redis(redisUrl);
+        const client = new Redis(redisUrl);
+        
+        client.on('error', (err) => {
+          const message = err.message || 'Unknown error';
+          console.error(`[Redis] Connection Error (${redisUrl}): ${message}`);
+        });
+        
+        return client;
       },
       inject: [ConfigService],
     },

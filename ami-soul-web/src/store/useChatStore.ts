@@ -21,7 +21,7 @@ interface ChatState {
   updateMessage: (id: string, updates: Partial<Message>) => void;
   updateMessageStatus: (id: string, status: Message['status']) => void;
   appendChunk: (messageId: string, chunk: string) => void;
-  finalizeStream: (messageId: string) => void;
+  finalizeStream: (messageId: string, isInterrupted?: boolean) => void;
   setStreaming: (isStreaming: boolean) => void;
   setTypingState: (state: TypingState) => void;
   setReplyToMessage: (message: Message | null) => void;
@@ -70,30 +70,55 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Restart timeout on every chunk to detect if stream stalls
     startTypingTimeout();
 
-    set((state) => ({
-      lastChunkTimestamp: Date.now(),
-      typingState: 'none',
-      streamingChunks: {
-        ...state.streamingChunks,
-        [messageId]: (state.streamingChunks[messageId] || '') + chunk,
-      },
-    }));
+    set((state) => {
+      // If message is already finalized, ignore late chunks
+      if (state.messages.some(m => m.id === messageId)) {
+        return state;
+      }
+
+      return {
+        lastChunkTimestamp: Date.now(),
+        typingState: 'none',
+        streamingChunks: {
+          ...state.streamingChunks,
+          [messageId]: (state.streamingChunks[messageId] || '') + chunk,
+        },
+      };
+    });
   },
 
-  finalizeStream: (messageId) => {
+  finalizeStream: (messageId, isInterrupted = false) => {
     const { clearTypingTimeouts } = get();
     clearTypingTimeouts();
 
     set((state) => {
       const content = state.streamingChunks[messageId];
-      if (!content) return { ...state, isStreaming: false, typingState: 'none' };
+      if (!content) {
+        return { 
+          ...state, 
+          isStreaming: Object.keys(state.streamingChunks).length > 0, 
+          typingState: 'none' 
+        };
+      }
+
+      // If message is already in messages, don't add it again. Just clean up chunks.
+      if (state.messages.some(m => m.id === messageId)) {
+        const newChunks = { ...state.streamingChunks };
+        delete newChunks[messageId];
+        return {
+          ...state,
+          streamingChunks: newChunks,
+          isStreaming: Object.keys(newChunks).length > 0,
+        };
+      }
 
       const newMessage: Message = {
         id: messageId === 'current' ? `ai_${Date.now()}` : messageId,
-        content,
+        content: isInterrupted ? `${content}...` : content,
         role: 'assistant',
         timestamp: new Date(),
         status: 'sent',
+        isInterrupted,
       };
 
       const newChunks = { ...state.streamingChunks };
@@ -102,7 +127,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return {
         messages: [...state.messages, newMessage],
         streamingChunks: newChunks,
-        isStreaming: false,
+        isStreaming: Object.keys(newChunks).length > 0,
         typingState: 'none',
         lastChunkTimestamp: null,
       };

@@ -65,7 +65,8 @@ const MessageBubble = ({
       }}
       className={cn(
         "flex flex-col max-w-[85%]",
-        isUser ? "ml-auto items-end mb-6" : "mr-auto items-start mb-4"
+        isUser ? "ml-auto items-end mb-6" : "mr-auto items-start mb-4",
+        message.isInterrupted && "opacity-60 grayscale-[0.2]"
       )}
       aria-label={`Tin nhắn từ ${isUser ? 'bạn' : 'Ami'}: ${content || ''}`}
     >

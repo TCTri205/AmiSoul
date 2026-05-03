@@ -13,6 +13,8 @@ export const SOCKET_EVENTS = {
   MESSAGE_ACK: 'message_ack',         // Message received and buffered
   AI_RESPONSE: 'ai_response',         // Full AI message (not streamed)
   CRISIS_RESPONSE: 'crisis_response', // AI crisis/safety message
+  SUGGEST_ACCOUNT_LINK: 'suggest_account_link', // Suggest guest upgrade account
+  GUEST_AUTH: 'guest_auth',           // Backend returns guest JWT
   ERROR: 'error',                     // Generic error
 
   // Client -> Server
