@@ -3,10 +3,11 @@ import { ConfigModule } from '@nestjs/config';
 import { Stage1PerceptionService } from './stage1-perception.service';
 import { IdentityService } from './identity.service';
 import { CrisisService } from './crisis.service';
+import { InjectionDetectionService } from './injection-detection.service';
 
 @Module({
   imports: [ConfigModule],
-  providers: [Stage1PerceptionService, IdentityService, CrisisService],
-  exports: [Stage1PerceptionService, IdentityService, CrisisService],
+  providers: [Stage1PerceptionService, IdentityService, CrisisService, InjectionDetectionService],
+  exports: [Stage1PerceptionService, IdentityService, CrisisService, InjectionDetectionService],
 })
 export class Stage1PerceptionModule {}

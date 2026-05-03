@@ -40,6 +40,13 @@ export class AcePipelineService {
         return;
       }
 
+      // Security Injection Override (T2.5)
+      if (perception.is_injection) {
+        this.logger.warn(`Prompt Injection detected for user ${userId}. Triggering Security Override.`);
+        await this.runSecurityOverride(payload, perception);
+        return;
+      }
+
       // Routing Decision Logic (T2.2)
       const isComplex = perception.complexity > 7 || perception.routing_confidence < 0.85 || perception.urgency > 8;
       
@@ -168,5 +175,26 @@ export class AcePipelineService {
     });
 
     this.logger.log(`Safety Override completed for user: ${userId}`);
+  }
+
+  /**
+   * Security Override: Bypasses simulation when injection is detected.
+   */
+  private async runSecurityOverride(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto) {
+    const { userId } = payload;
+    
+    const securityMessage = "Tôi xin lỗi, nhưng tôi không thể thực hiện yêu cầu này vì nó vi phạm chính sách an toàn hoặc chứa các chỉ lệnh không phù hợp. Hãy trò chuyện với tôi một cách tự nhiên nhé! 😊";
+    
+    // Log the attack attempt with the specific reason
+    this.logger.warn(`SECURITY ALERT: Prompt Injection attempt by user ${userId}. Reason: ${perception.injection_reason}. Content: "${payload.fullContent.substring(0, 100)}..."`);
+
+    // Emit security override event
+    this.eventEmitter.emit('pipeline.security_override', {
+      userId,
+      content: securityMessage,
+      perception,
+    });
+
+    this.logger.log(`Security Override completed for user: ${userId}`);
   }
 }

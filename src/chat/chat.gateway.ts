@@ -132,6 +132,21 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     });
   }
 
+  @OnEvent('pipeline.security_override')
+  handleSecurityOverride(payload: { userId: string; content: string; perception: any }) {
+    this.logger.warn(`Emitting Security Warning for user: ${payload.userId}`);
+    
+    this.server.to(`user:${payload.userId}`).emit('ai_response', {
+      content: payload.content,
+      role: 'system_security',
+      metadata: {
+        is_injection: true,
+        urgency: 10,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   private extractToken(client: Socket): string | null {
     if (client.handshake.auth?.token) return client.handshake.auth.token;
     if (client.handshake.query?.token) return client.handshake.query.token as string;

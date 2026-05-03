@@ -4,6 +4,7 @@ import { Stage1PerceptionService } from './stage1-perception.service';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { SessionType } from '../../../chat/dto/message.dto';
 import { CrisisService } from './crisis.service';
+import { InjectionDetectionService } from './injection-detection.service';
 
 // Mocking GoogleGenerativeAI
 const mockModel = {
@@ -37,6 +38,12 @@ describe('Stage1PerceptionService', () => {
           useValue: {
             isCrisis: jest.fn().mockReturnValue(false),
             getSafetyResponse: jest.fn().mockReturnValue('Safety Response'),
+          },
+        },
+        {
+          provide: InjectionDetectionService,
+          useValue: {
+            detect: jest.fn().mockReturnValue({ detected: false, confidence: 0 }),
           },
         },
       ],
@@ -92,7 +99,7 @@ describe('Stage1PerceptionService', () => {
 
       const result = await service.process(payload);
 
-      expect(result).toEqual({ ...mockResult, is_crisis: false });
+      expect(result).toEqual({ ...mockResult, is_crisis: false, is_injection: false });
       expect(mockModel.generateContent).toHaveBeenCalled();
     });
 
@@ -112,6 +119,7 @@ describe('Stage1PerceptionService', () => {
         timestamp_flag: false,
         noise_flag: false,
         is_crisis: false,
+        is_injection: false,
       });
     });
 

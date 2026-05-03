@@ -9,5 +9,7 @@ export class PerceptionResultDto {
   timestamp_flag: boolean;
   noise_flag: boolean;
   is_crisis: boolean;
+  is_injection: boolean;
+  injection_reason?: string;
   summary?: string;
 }
