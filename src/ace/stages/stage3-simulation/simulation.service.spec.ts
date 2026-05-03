@@ -11,6 +11,7 @@ describe('SimulationService', () => {
   let service: SimulationService;
   let orchestrator: jest.Mocked<LlmOrchestrator>;
   let eventEmitter: jest.Mocked<EventEmitter2>;
+  let redisService: jest.Mocked<RedisService>;
 
   beforeEach(async () => {
     const orchestratorMock = {
@@ -37,6 +38,7 @@ describe('SimulationService', () => {
     service = module.get<SimulationService>(SimulationService);
     orchestrator = module.get(LlmOrchestrator);
     eventEmitter = module.get(EventEmitter2);
+    redisService = module.get(RedisService);
   });
 
   it('should be defined', () => {
@@ -94,7 +96,7 @@ describe('SimulationService', () => {
     expect(completedCalls.length).toBe(0);
   });
 
-  it('should trigger self-correction on safety violation (T4.5)', async () => {
+  it('should trigger self-correction on safety violation and complete the pipeline (T4.5)', async () => {
     const mockChunks = [
       { text: 'I am an AI ', isComplete: false },
       { text: 'language model', isComplete: false },
@@ -109,8 +111,24 @@ describe('SimulationService', () => {
 
     await service.simulate(mockContext);
 
+    // 1. Check fallback chunk emission
     expect(eventEmitter.emit).toHaveBeenCalledWith('simulation.chunk', expect.objectContaining({
-      isSafetyFallback: true
+      isSafetyFallback: true,
+      chunk: expect.stringContaining('Tôi xin lỗi')
+    }));
+
+    // 2. Check history persistence (The Critical Fix)
+    expect(redisService.rpush).toHaveBeenCalledWith(
+      'chat_history:user123',
+      expect.stringContaining('Tôi xin lỗi')
+    );
+
+    // 3. Check completion event (The Critical Fix)
+    expect(eventEmitter.emit).toHaveBeenCalledWith('simulation.completed', expect.objectContaining({
+      userId: 'user123',
+      result: expect.objectContaining({
+        text: expect.stringContaining('Tôi xin lỗi')
+      })
     }));
   });
 
@@ -157,7 +175,7 @@ describe('SimulationService', () => {
     it('should map specific actions to emojis', () => {
       const text = 'Mình rất vui! *mỉm cười rạng rỡ*';
       const reaction = (service as any).extractReaction(text);
-      expect(reaction).toBe('😊'); // Note: 'mỉm cười' is matched first in my map or specific enough
+      expect(reaction).toBe('😊');
     });
 
     it('should return undefined if no reaction found', () => {
