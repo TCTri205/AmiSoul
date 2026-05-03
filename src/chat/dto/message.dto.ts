@@ -10,6 +10,10 @@ export class MessageMetadataDto {
   @IsOptional()
   session_type?: SessionType = SessionType.PERSISTENT;
 
+  @IsString()
+  @IsOptional()
+  messageId?: string;
+
   @IsObject()
   @IsOptional()
   custom_data?: Record<string, any>;
