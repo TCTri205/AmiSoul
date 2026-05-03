@@ -14,7 +14,7 @@ Xây dựng hệ thống lưu trữ và truy xuất ký ức theo cảm xúc. Tr
 | [T3.5](T3.5_Time_Anomaly_Detector.md) | Time Anomaly Detector | ✅ Completed | P1 |
 | [T3.6](T3.6_Bonding_Gate_Sensitivity.md) | Bonding Gate Sensitivity | ✅ Completed | P2 |
 | [T3.7](T3.7_Context_Injection_Test.md) | Context Injection Test | ✅ Completed | P2 |
-| [T3.8](T3.8_Prisma_Encryption_Middleware.md) | Prisma Encryption Middleware | 🟢 Ready | P0 |
+| [T3.8](T3.8_Prisma_Encryption_Middleware.md) | Prisma Encryption Middleware | ✅ Completed | P0 |
 
 ## 🔗 Liên kết Hữu ích
 - **Epic gốc:** [[EPIC-03] Affective Memory (CMA/CAL)](../epic/EPIC-03_Memory_CAL.md)

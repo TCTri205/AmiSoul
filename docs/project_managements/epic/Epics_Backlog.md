@@ -10,15 +10,15 @@ Dự án được chia thành **9 Sprint** (Dự kiến 1 tuần/sprint cho MVP 
 
 | Sprint | Epic ID | Tên Sprint | Mục tiêu Trọng tâm |
 | :--- | :--- | :--- | :--- |
-| **[S1](../ticket/Sprint-01/)** | **EPIC-01** | Foundation & Real-time Gateway | Setup hạ tầng NestJS, Redis, PostgreSQL & Stage 0. |
-| **[S2](../ticket/Sprint-02/)** | **EPIC-02** | Perception & Routing | Triển khai Stage 1 (SLM Router) & Logic phân loại Intent/Sentiment. |
-| **[S3](../ticket/Sprint-03/)** | **EPIC-03** | Affective Memory & Security | Triển khai Stage 2, PGVector & Prisma Encryption Middleware. |
-| **[S4](../ticket/Sprint-04/)** | **EPIC-04** | The Brain (Simulation) | Hoàn thiện Stage 3 (Gemini 2.5 Flash Single-pass). |
-| **[S5](../ticket/Sprint-05/)** | **EPIC-05** | Safe Harbor Frontend | UI Web, Socket.io Streaming & Giao diện cảm xúc. |
-| **[S6](../ticket/Sprint-06/)** | **EPIC-06** | Safety & Monitoring | Stage 4 (Safety Shield, Vibe Monitor). |
-| **[S7](../ticket/Sprint-07/)** | **EPIC-07** | Offline Intelligence | Stage 5 (BullMQ), Memory Compression & Implicit Feedback. |
-| **[S8](../ticket/Sprint-08/)** | **EPIC-08** | Relationship Evolution | Bonding Score & DPE Persona Evolution logic. |
-| **[S9](../ticket/Sprint-09/)** | **EPIC-09** | Launch Readiness | Load test, Latency Tuning & Production Setup. |
+| [x] **[S1](../ticket/Sprint-01/)** | **EPIC-01** | Foundation & Real-time Gateway | Setup hạ tầng NestJS, Redis, PostgreSQL & Stage 0. |
+| [x] **[S2](../ticket/Sprint-02/)** | **EPIC-02** | Perception & Routing | Triển khai Stage 1 (SLM Router) & Logic phân loại Intent/Sentiment. |
+| [x] **[S3](../ticket/Sprint-03/)** | **EPIC-03** | Affective Memory & Security | Triển khai Stage 2, PGVector & Prisma Encryption Middleware. |
+| [x] **[S4](../ticket/Sprint-04/)** | **EPIC-04** | The Brain (Simulation) | Hoàn thiện Stage 3 (Gemini 2.5 Flash Single-pass). |
+| [ ] **[S5](../ticket/Sprint-05/)** | **EPIC-05** | Safe Harbor Frontend | UI Web, Socket.io Streaming & Giao diện cảm xúc. |
+| [ ] **[S6](../ticket/Sprint-06/)** | **EPIC-06** | Safety & Monitoring | Stage 4 (Safety Shield, Vibe Monitor). |
+| [ ] **[S7](../ticket/Sprint-07/)** | **EPIC-07** | Offline Intelligence | Stage 5 (BullMQ), Memory Compression & Implicit Feedback. |
+| [ ] **[S8](../ticket/Sprint-08/)** | **EPIC-08** | Relationship Evolution | Bonding Score & DPE Persona Evolution logic. |
+| [ ] **[S9](../ticket/Sprint-09/)** | **EPIC-09** | Launch Readiness | Load test, Latency Tuning & Production Setup. |
 
 ---
 

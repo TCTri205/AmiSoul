@@ -1,2 +1,3 @@
-- **Status:** **Sprint-04 (Unified Cognitive Simulation)** — `✅ Completed (7/7)`.
-  - **Next Sprint:** Sprint-05 (Safe Harbor Frontend) — 🟢 Ready.
+- **Status:** **Sprint-05 (Safe Harbor Frontend)** — `🟡 In Progress (Planning/Docs Finalized)`.
+  - **Architecture:** `✅ FrontendArchitecture.md` (Completed & Synced).
+  - **Next Step:** Implement T5.1 (Next.js & Design System).

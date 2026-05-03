@@ -19,6 +19,9 @@ Xây dựng giao diện người dùng (Safe Harbor) tối giản, ấm áp và 
 - **[T5.6: Haptic Feedback Simulation](../ticket/Sprint-05/T5.6_Haptic_Feedback_Simulation.md)**
 - **[T5.7: Mobile Responsive Design](../ticket/Sprint-05/T5.7_Mobile_Responsive_Design.md)**
 - **[T5.8: E2E Message Flow Test](../ticket/Sprint-05/T5.8_E2E_Message_Flow_Test.md)**
+- **[T5.9: Auth-less Onboarding UI](../ticket/Sprint-05/T5.9_Auth_Less_Onboarding.md)**
+- **[T5.10: Media Input & Preemption UI](../ticket/Sprint-05/T5.10_Media_Input_Preemption.md)**
+- **[T5.13: UI: Settings Page & Privacy Controls](../ticket/Sprint-05/T5.13_Settings_Privacy_UI.md)**
 
 ## 4. Rủi ro & Giảm thiểu (Risks & Mitigation)
 - **Rủi ro:** Streaming bị gián đoạn do kết nối mạng kém.

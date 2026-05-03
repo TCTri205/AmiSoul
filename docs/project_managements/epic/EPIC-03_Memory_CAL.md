@@ -19,6 +19,7 @@ Xây dựng hệ thống lưu trữ và truy xuất ký ức theo cảm xúc (Af
 - **[T3.6: Bonding Gate Sensitivity](../ticket/Sprint-03/T3.6_Bonding_Gate_Sensitivity.md)**
 - **[T3.7: Context Injection Test](../ticket/Sprint-03/T3.7_Context_Injection_Test.md)**
 - **[T3.8: Prisma Encryption Middleware](../ticket/Sprint-03/T3.8_Prisma_Encryption_Middleware.md)**
+- **[T5.14: Privacy: Data Deletion & GDPR API](../ticket/Sprint-05/T5.14_Privacy_Data_API.md)**
 
 ## 4. Rủi ro & Giảm thiểu (Risks & Mitigation)
 - **Rủi ro:** Truy xuất quá nhiều ký ức dẫn đến tràn Context Window (Token Budget).

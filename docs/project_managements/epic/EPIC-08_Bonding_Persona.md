@@ -13,7 +13,7 @@ Hoàn thiện logic tiến hóa mối quan hệ giữa người dùng và AI. EP
 ## 3. Danh sách Tác vụ (Technical Tasks)
 - **[T8.1: Bonding Service Formula](../ticket/Sprint-08/T8.1_Bonding_Service_Formula.md)**
 - **[T8.2: Persona Manager DPE](../ticket/Sprint-08/T8.2_Persona_Manager_DPE.md)**
-- **[T7.8: Implicit Feedback Loop](../ticket/Sprint-07/T7.8_Implicit_Feedback_Loop.md)**
+- **[T8.3: Relationship Milestone & Tier Logic](../ticket/Sprint-08/T8.3_Relationship_Milestone_Tier.md)**
 - **[T8.4: Weekly Bonding Decay](../ticket/Sprint-08/T8.4_Weekly_Bonding_Decay.md)**
 - **[T8.5: Special Date Recognition](../ticket/Sprint-08/T8.5_Special_Date_Recognition.md)**
 - **[T8.6: Bonding Growth Dashboard](../ticket/Sprint-08/T8.6_Bonding_Growth_Dashboard.md)**
