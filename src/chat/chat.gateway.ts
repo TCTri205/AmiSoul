@@ -150,6 +150,33 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     });
   }
 
+  @OnEvent('simulation.chunk')
+  handleSimulationChunk(payload: {
+    userId: string;
+    chunk: string;
+    isComplete: boolean;
+    provider?: string;
+    model?: string;
+  }) {
+    this.server.to(`user:${payload.userId}`).emit('ai_response_chunk', {
+      content: payload.chunk,
+      is_complete: payload.isComplete,
+      metadata: {
+        provider: payload.provider,
+        model: payload.model,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  @OnEvent('simulation.completed')
+  handleSimulationCompleted(payload: { userId: string; result: any }) {
+    this.server.to(`user:${payload.userId}`).emit('ai_response_completed', {
+      ...payload.result,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   private extractToken(client: Socket): string | null {
     if (client.handshake.auth?.token) return client.handshake.auth.token;
     if (client.handshake.query?.token) return client.handshake.query.token as string;

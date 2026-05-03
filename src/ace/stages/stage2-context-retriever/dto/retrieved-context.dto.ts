@@ -31,6 +31,8 @@ export class RetrievedContextDto {
 
   userPersonaModel: any;
 
+  history: { role: string; content: string }[];
+
   // Budget tracking for Stage 3
   tokenEstimates: {
     persona: number;

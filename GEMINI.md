@@ -1,2 +1,2 @@
-- **Status:** **Sprint-03 (Affective Memory & Security)** — `✅ Completed (8/8)`.
-  - **Next Sprint:** Sprint-04 (Unified Cognitive Simulation) — 🟢 Ready.
+- **Status:** **Sprint-04 (Unified Cognitive Simulation)** — `✅ Completed (7/7)`.
+  - **Next Sprint:** Sprint-05 (Safe Harbor Frontend) — 🟢 Ready.

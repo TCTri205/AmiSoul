@@ -37,13 +37,15 @@ export class ContextRetrieverService {
         select: { bondingScore: true, dpe: true },
       });
 
-      const [similarMemories, calEvents, user, currentVibe] = await Promise.all([
+      const [similarMemories, calEvents, user, currentVibe, historyRaw] = await Promise.all([
         this.prisma.searchSimilarMemories(userId, queryVector, 10), // Fetch 10 candidates
         this.getCalL1Events(userId),
         userPromise,
         this.redis.get(`vibe:${userId}`),
+        this.redis.get(`chat_history:${userId}`),
       ]);
 
+      const history = historyRaw ? JSON.parse(historyRaw).slice(-10) : []; // Last 10 messages
       const bondingScore = (user as any)?.bondingScore ?? 0;
       const vibe = currentVibe ?? 'neutral';
       const dpeModel = (user as any)?.dpe ?? {};
@@ -104,12 +106,13 @@ export class ContextRetrieverService {
         sessionVibe: truncatedVibe,
         personaShield: PERSONA_SHIELD,
         userPersonaModel: finalDpe,
+        history,
         tokenEstimates: {
           persona: this.estimateTokens(PERSONA_SHIELD),
           vibe: this.estimateTokens(truncatedVibe),
           memories: this.estimateTokens(JSON.stringify(budgetMemories)),
           cal: this.estimateTokens(JSON.stringify(budgetCal)),
-          history: 0, // Will be calculated in Stage 3
+          history: this.estimateTokens(JSON.stringify(history)),
           dpe: this.estimateTokens(JSON.stringify(finalDpe)),
         },
       };
@@ -132,6 +135,7 @@ export class ContextRetrieverService {
         sessionVibe: 'neutral',
         personaShield: PERSONA_SHIELD,
         userPersonaModel: {},
+        history: [],
         tokenEstimates: {
           persona: this.estimateTokens(PERSONA_SHIELD),
           vibe: 0,

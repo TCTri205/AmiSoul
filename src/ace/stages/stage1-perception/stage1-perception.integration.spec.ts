@@ -5,9 +5,12 @@ import * as path from 'path';
 import { Stage1PerceptionService } from './stage1-perception.service';
 import { CrisisService } from './crisis.service';
 import { InjectionDetectionService } from './injection-detection.service';
+import { TimeAnomalyService } from './time-anomaly.service';
 import { AggregatedMessageBlockDto } from '../stage0-aggregator/dto/aggregated-message-block.dto';
 import { SessionType } from '../../../chat/dto/message.dto';
 import { AiProviderModule } from '../../../ai-provider/ai-provider.module';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { RedisService } from '../../../redis/redis.service';
 
 describe('Stage1PerceptionService (Integration)', () => {
   let service: Stage1PerceptionService;
@@ -28,8 +31,27 @@ describe('Stage1PerceptionService (Integration)', () => {
         }),
         AiProviderModule,
       ],
-      providers: [Stage1PerceptionService, CrisisService, InjectionDetectionService],
-    }).compile();
+      providers: [
+        Stage1PerceptionService,
+        CrisisService,
+        InjectionDetectionService,
+        TimeAnomalyService,
+        {
+          provide: PrismaService,
+          useValue: {
+            behavioralBaseline: {
+              findUnique: jest.fn(),
+            },
+          },
+        },
+      ],
+    })
+      .overrideProvider(RedisService)
+      .useValue({
+        get: jest.fn(),
+        set: jest.fn(),
+      })
+      .compile();
 
     service = module.get<Stage1PerceptionService>(Stage1PerceptionService);
     // Trigger module init to setup circuit breakers

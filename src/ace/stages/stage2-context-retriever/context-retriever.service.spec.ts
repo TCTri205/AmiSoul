@@ -96,6 +96,7 @@ describe('ContextRetrieverService', () => {
       redis.get.mockImplementation(async (key) => {
         if (key === 'vibe:user-1') return 'positive';
         if (key === 'cal:expectations:user-1') return JSON.stringify([{ event: 'Meeting' }]);
+        if (key === 'chat_history:user-1') return JSON.stringify([{ role: 'user', content: 'hi' }]);
         return null;
       });
 
@@ -127,7 +128,10 @@ describe('ContextRetrieverService', () => {
 
       prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
       (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50, dpe: {} });
-      redis.get.mockResolvedValue('neutral');
+      redis.get.mockImplementation(async (key) => {
+        if (key.includes('vibe')) return 'neutral';
+        return null;
+      });
 
       const result = await service.retrieve(context);
 

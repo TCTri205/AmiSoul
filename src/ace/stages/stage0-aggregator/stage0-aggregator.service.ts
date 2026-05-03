@@ -146,6 +146,11 @@ export class Stage0AggregatorService {
 
     this.logger.log(`Aggregated ${messages.length} messages for user: ${userId} [${sessionType}]`);
 
+    // Save to Chat History (T4.1 Complement)
+    const historyKey = `chat_history:${userId}`;
+    await this.redisService.rpush(historyKey, JSON.stringify({ role: 'user', content: fullContent }));
+    await this.redisService.ltrim(historyKey, -20, -1); // Keep last 20 messages
+
     // Emit event for Stage 1 to consume
     this.eventEmitter.emit('stage0.aggregated', aggregatedBlock);
   }

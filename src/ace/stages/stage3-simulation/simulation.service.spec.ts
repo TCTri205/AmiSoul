@@ -4,6 +4,7 @@ import { of, throwError, Subject } from 'rxjs';
 import { SimulationService } from './simulation.service';
 import { TokenBudgetManager } from './token-budget-manager.service';
 import { LlmOrchestrator } from '../../../ai-provider/llm-orchestrator.service';
+import { RedisService } from '../../../redis/redis.service';
 import { CognitiveContext } from '../../middleware/dto/cognitive-context.dto';
 
 describe('SimulationService', () => {
@@ -15,6 +16,10 @@ describe('SimulationService', () => {
     const orchestratorMock = {
       generateStream: jest.fn(),
     };
+    const redisMock = {
+      rpush: jest.fn().mockResolvedValue(1),
+      ltrim: jest.fn().mockResolvedValue(true),
+    };
     const eventEmitterMock = {
       emit: jest.fn(),
     };
@@ -24,6 +29,7 @@ describe('SimulationService', () => {
         SimulationService,
         TokenBudgetManager,
         { provide: LlmOrchestrator, useValue: orchestratorMock },
+        { provide: RedisService, useValue: redisMock },
         { provide: EventEmitter2, useValue: eventEmitterMock },
       ],
     }).compile();

@@ -7,7 +7,7 @@ Hoàn thiện "trái tim" của hệ thống - Single-pass Simulation. Triển k
 
 | ID | Tên Tác vụ | Trạng thái | Độ ưu tiên |
 | :--- | :--- | :--- | :--- |
-| [T4.1](T4.1_Simulation_Service_Gemini.md) | Simulation Service (Gemini) | 🟢 Ready | P0 |
+| [T4.1](T4.1_Simulation_Service_Gemini.md) | Simulation Service (Gemini) | ✅ Completed | P0 |
 | [T4.2](T4.2_XML_System_Prompt.md) | XML System Prompt | 🟢 Ready | P0 |
 | [T4.3](T4.3_Token_Budget_Manager.md) | Token Budget Manager | 🟢 Ready | P1 |
 | [T4.4](T4.4_Prompt_Boundary_Isolation.md) | Prompt Boundary Isolation | 🟢 Ready | P1 |

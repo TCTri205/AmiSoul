@@ -7,6 +7,8 @@ import { CrisisService } from './stages/stage1-perception/crisis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SessionType } from '../chat/dto/message.dto';
 import { PerceptionMiddleware } from './middleware/perception.middleware';
+import { ContextRetrieverService } from './stages/stage2-context-retriever/context-retriever.service';
+import { SimulationService } from './stages/stage3-simulation/simulation.service';
 
 describe('AcePipelineService', () => {
   let service: AcePipelineService;
@@ -22,6 +24,18 @@ describe('AcePipelineService', () => {
           provide: Stage1PerceptionService,
           useValue: {
             process: jest.fn(),
+          },
+        },
+        {
+          provide: ContextRetrieverService,
+          useValue: {
+            retrieve: jest.fn(),
+          },
+        },
+        {
+          provide: SimulationService,
+          useValue: {
+            simulate: jest.fn(),
           },
         },
         {

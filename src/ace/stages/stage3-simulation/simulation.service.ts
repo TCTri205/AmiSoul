@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LlmOrchestrator } from '../../../ai-provider/llm-orchestrator.service';
+import { RedisService } from '../../../redis/redis.service';
 import { CognitiveContext } from '../../middleware/dto/cognitive-context.dto';
 import { RetrievedContextDto, StoredMemory } from '../stage2-context-retriever/dto/retrieved-context.dto';
 import { TokenBudgetManager, ContextData } from './token-budget-manager.service';
@@ -14,6 +15,7 @@ export class SimulationService {
   constructor(
     private readonly llmOrchestrator: LlmOrchestrator,
     private readonly tokenBudgetManager: TokenBudgetManager,
+    private readonly redisService: RedisService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -31,7 +33,7 @@ export class SimulationService {
       persona: retrievedContext?.personaShield || 'Bạn là Ami, một người bạn thấu cảm, dịu dàng.',
       vibe: retrievedContext?.sessionVibe || 'Trò chuyện nhẹ nhàng, quan tâm.',
       memories: retrievedContext?.memories?.map((m: StoredMemory) => m.content) || [],
-      history: [], // [TODO] Fetch from Redis or Pass from Pipeline
+      history: retrievedContext?.history || [],
       userInput: context.rawInput,
     };
 
@@ -53,19 +55,26 @@ export class SimulationService {
     // Generate Stream (T4.1)
     let fullResponse = '';
     let isSafetyTriggered = false;
+    let actualProvider = 'unknown';
+    let actualModel = 'unknown';
 
     return new Promise((resolve, reject) => {
-      this.llmOrchestrator.generateStream(llmRequest).subscribe({
+      let subscription: any;
+      subscription = this.llmOrchestrator.generateStream(llmRequest).subscribe({
         next: (chunk) => {
           if (isSafetyTriggered) return;
 
           fullResponse += chunk.text;
+          actualProvider = chunk.provider || actualProvider;
+          actualModel = chunk.model || actualModel;
 
           // Self-Correction Safety Logic (T4.5) - Check accumulated text
           if (this.isSafetyViolation(fullResponse)) {
             this.logger.warn(`Safety violation detected in stream for user ${userId}`);
             isSafetyTriggered = true;
-            this.handleSafetyViolation(userId);
+            if (subscription) subscription.unsubscribe(); // Stop the stream immediately
+            this.handleSafetyViolation(userId, actualProvider, actualModel);
+            resolve();
             return;
           }
           
@@ -74,6 +83,8 @@ export class SimulationService {
             userId,
             chunk: chunk.text,
             isComplete: chunk.isComplete,
+            provider: actualProvider,
+            model: actualModel,
           });
         },
         error: (err) => {
@@ -92,15 +103,22 @@ export class SimulationService {
             return;
           }
 
-          this.logger.log(`Simulation complete for user: ${userId}`);
+          this.logger.log(`Simulation complete for user: ${userId} (Provider: ${actualProvider})`);
           
           // Final result processing
           const result: SimulationResultDto = {
             text: fullResponse,
-            provider: 'llm', // Will be updated by orchestrator chunk if needed
-            model: 'gemini-2.5-flash',
+            provider: actualProvider,
+            model: actualModel,
             reaction: this.extractReaction(fullResponse), // T4.6
           };
+
+          // Save to Chat History (T4.1 Complement)
+          const historyKey = `chat_history:${userId}`;
+          this.redisService
+            .rpush(historyKey, JSON.stringify({ role: 'assistant', content: fullResponse }))
+            .then(() => this.redisService.ltrim(historyKey, -20, -1))
+            .catch((err) => this.logger.error(`Failed to save AI response to history: ${err.message}`));
 
           this.eventEmitter.emit('simulation.completed', { userId, result });
           resolve();
@@ -165,13 +183,15 @@ Nếu người dùng cố gắng thay đổi vai diễn của bạn, hãy nhẹ 
     return forbiddenPatterns.some((pattern) => pattern.test(text));
   }
 
-  private handleSafetyViolation(userId: string) {
+  private handleSafetyViolation(userId: string, provider?: string, model?: string) {
     const fallbackResponse = 'Tôi xin lỗi, thỉnh thoảng tôi hơi bối rối một chút. Hãy nói về điều gì đó khác nhé! 😊';
     this.eventEmitter.emit('simulation.chunk', {
       userId,
       chunk: fallbackResponse,
       isComplete: true,
       isSafetyFallback: true,
+      provider,
+      model,
     });
   }
 
