@@ -6,6 +6,9 @@ import { PerceptionResultDto } from './stages/stage1-perception/dto/perception-r
 import { IdentityService } from './stages/stage1-perception/identity.service';
 import { CrisisService } from './stages/stage1-perception/crisis.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PerceptionMiddleware } from './middleware/perception.middleware';
+import { CognitiveContext } from './middleware/dto/cognitive-context.dto';
+
 
 @Injectable()
 export class AcePipelineService {
@@ -15,9 +18,11 @@ export class AcePipelineService {
     private readonly stage1: Stage1PerceptionService,
     private readonly identityService: IdentityService,
     private readonly crisisService: CrisisService,
+    private readonly perceptionMiddleware: PerceptionMiddleware,
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
+
 
   @OnEvent('stage0.aggregated')
   async handleAggregatedBlock(payload: AggregatedMessageBlockDto) {
@@ -27,36 +32,42 @@ export class AcePipelineService {
     try {
       this.logger.log(`Starting ACE Pipeline for user: ${userId}`);
       
-      // Stage 1: Perception (Always runs as the Router)
-      const perception = await this.stage1.process(payload, signal);
+      // Stage 1: Perception (Router)
+      const stage1Response = await this.stage1.process(payload, signal);
       
+      // Middleware: Transform & Normalize (T2.6)
+      const context = this.perceptionMiddleware.transform(
+        stage1Response.rawResponse,
+        payload,
+        stage1Response.perception,
+      );
+
       // Behavioral Identity Check (T2.3)
-      await this.performIdentityCheck(payload, perception);
+      await this.performIdentityCheck(payload, context.perception);
       
       // Heuristic Crisis Override (T2.4)
-      if (perception.is_crisis) {
+      if (context.perception.is_crisis) {
         this.logger.warn(`Crisis detected for user ${userId}. Triggering Safety Override.`);
-        await this.runSafetyOverride(payload, perception);
+        await this.runSafetyOverride(payload, context.perception);
         return;
       }
 
       // Security Injection Override (T2.5)
-      if (perception.is_injection) {
+      if (context.perception.is_injection) {
         this.logger.warn(`Prompt Injection detected for user ${userId}. Triggering Security Override.`);
-        await this.runSecurityOverride(payload, perception);
+        await this.runSecurityOverride(payload, context.perception);
         return;
       }
 
-      // Routing Decision Logic (T2.2)
-      const isComplex = perception.complexity > 7 || perception.routing_confidence < 0.85 || perception.urgency > 8;
-      
-      if (isComplex) {
-        await this.runFullCognitivePath(payload, perception, signal);
+      // Routing Decision (T2.6 - Decision logic moved to middleware)
+      if (context.routingPath === 'full') {
+        await this.runFullCognitivePath(context, signal);
       } else {
-        await this.runFastPath(payload, perception, signal);
+        await this.runFastPath(context, signal);
       }
 
-      this.logger.log(`ACE Pipeline completed successfully for user: ${userId} (${isComplex ? 'Full' : 'Fast'} Path)`);
+      this.logger.log(`ACE Pipeline completed successfully for user: ${userId} (${context.routingPath.toUpperCase()} Path)`);
+
       
     } catch (error) {
       if (error.message === 'AbortError' || error.name === 'AbortError' || signal?.aborted) {
@@ -74,33 +85,33 @@ export class AcePipelineService {
   /**
    * Full Cognitive Path: Stage 1 -> Stage 2 (Retrieval) -> Stage 3 (LLM) -> Stage 4 (Monitor)
    */
-  private async runFullCognitivePath(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto, signal?: AbortSignal) {
-    const { userId } = payload;
-    this.logger.log(`Routing user ${userId} to FULL COGNITIVE PATH (Confidence: ${perception.routing_confidence})`);
+  private async runFullCognitivePath(context: CognitiveContext, signal?: AbortSignal) {
+    const { userId } = context;
+    this.logger.log(`Routing user ${userId} to FULL COGNITIVE PATH (Confidence: ${context.perception.routing_confidence})`);
 
     // Stage 2: Context Retrieval (CMA + CAL)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 2: Retrieving deep context for user: ${userId}`);
-    // [TODO] Call Stage 2 Service
+    // [TODO] Call Stage 2 Service with context
 
     // Stage 3: LLM Simulation (Full Reasoning)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 3: Simulating empathetic response for user: ${userId}`);
-    // [TODO] Call Stage 3 Service
+    // [TODO] Call Stage 3 Service with context
 
     // Stage 4: Vibe & Safety Monitor
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 4: Monitoring session vibe for user: ${userId}`);
-    // [TODO] Call Stage 4 Service
+    // [TODO] Call Stage 4 Service with context
   }
 
   /**
    * Fast Path: Stage 1 -> Stage 3 (Fast Response) -> Stage 4 (Sync)
    * Skips deep retrieval to reduce latency for simple interactions.
    */
-  private async runFastPath(payload: AggregatedMessageBlockDto, perception: PerceptionResultDto, signal?: AbortSignal) {
-    const { userId } = payload;
-    this.logger.log(`Routing user ${userId} to FAST PATH (Confidence: ${perception.routing_confidence})`);
+  private async runFastPath(context: CognitiveContext, signal?: AbortSignal) {
+    const { userId } = context;
+    this.logger.log(`Routing user ${userId} to FAST PATH (Confidence: ${context.perception.routing_confidence})`);
 
     // Stage 2: Skip or minimal retrieval
     this.logger.debug(`Stage 2: Skipping deep retrieval for fast path (User: ${userId})`);
@@ -108,11 +119,14 @@ export class AcePipelineService {
     // Stage 3: Fast Simulation (Small model or direct response)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 3: Generating fast response for user: ${userId}`);
+    // [TODO] Call Stage 3 Service with context
 
     // Stage 4: Monitor (Still needed for safety)
     if (signal?.aborted) throw new Error('AbortError');
     this.logger.debug(`Stage 4: Monitoring fast session for user: ${userId}`);
+    // [TODO] Call Stage 4 Service with context
   }
+
 
   /**
    * Helper to perform behavioral identity check and update perception metadata

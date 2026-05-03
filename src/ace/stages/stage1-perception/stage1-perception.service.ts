@@ -7,6 +7,12 @@ import { PerceptionResultDto } from './dto/perception-result.dto';
 import { CrisisService } from './crisis.service';
 import { InjectionDetectionService } from './injection-detection.service';
 
+export interface Stage1Response {
+  perception: PerceptionResultDto;
+  rawResponse: string;
+}
+
+
 @Injectable()
 export class Stage1PerceptionService implements OnModuleInit {
   private readonly logger = new Logger(Stage1PerceptionService.name);
@@ -51,7 +57,8 @@ export class Stage1PerceptionService implements OnModuleInit {
     this.breaker.on('close', () => this.logger.log('Circuit Breaker CLOSED for Gemini API'));
   }
 
-  async process(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<PerceptionResultDto> {
+  async process(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<Stage1Response> {
+
     this.logger.log(`Stage 1: Processing perception for user ${payload.userId}`);
     
     // Heuristic Crisis Detection (T2.4)
@@ -66,20 +73,10 @@ export class Stage1PerceptionService implements OnModuleInit {
       // but we flag it clearly. Or we could skip. Let's run it but with a warning in prompt.
       const result = await this.executeWithRetry(payload, signal);
       
-      result.is_crisis = isCrisis;
-      result.is_injection = isInjectionHeuristic || (result as any).is_injection === true;
-      
-      if (result.is_injection) {
-        result.injection_reason = injectionHeuristic.reason || 'AI detected potential prompt manipulation';
-      }
-
-      if (isCrisis || result.is_injection) {
-        result.urgency = 10;
-      }
-
-      this.logger.log(`Stage 1: Completed for user ${payload.userId} (Crisis: ${result.is_crisis}, Injection: ${result.is_injection})`);
+      this.logger.log(`Stage 1: Completed for user ${payload.userId} (Crisis: ${result.perception.is_crisis}, Injection: ${result.perception.is_injection})`);
       return result;
     } catch (error) {
+
       if (error.message === 'AbortError') {
         this.logger.warn(`Stage 1 Aborted for user ${payload.userId}`);
         throw error;
@@ -87,23 +84,28 @@ export class Stage1PerceptionService implements OnModuleInit {
       this.logger.error(`Stage 1 Failed for user ${payload.userId}: ${error.message}`);
       // Fallback result in case of failure, but STILL respect the heuristic crisis check
       return {
-        intent: 'unknown',
-        sentiment: 'neutral',
-        complexity: 5,
-        urgency: (isCrisis || isInjectionHeuristic) ? 10 : 5,
-        identity_anomaly: false,
-        routing_confidence: 0,
-        sarcasm_hint: false,
-        timestamp_flag: false,
-        noise_flag: false,
-        is_crisis: isCrisis,
-        is_injection: isInjectionHeuristic,
-        injection_reason: injectionHeuristic.reason,
+        perception: {
+          intent: 'unknown',
+          sentiment: 'neutral',
+          complexity: 5,
+          urgency: (isCrisis || isInjectionHeuristic) ? 10 : 5,
+          identity_anomaly: false,
+          routing_confidence: 0,
+          sarcasm_hint: false,
+          timestamp_flag: false,
+          noise_flag: false,
+          is_crisis: isCrisis,
+          is_injection: isInjectionHeuristic,
+          injection_reason: injectionHeuristic.reason,
+        },
+        rawResponse: '',
       };
+
     }
   }
 
-  private async executeWithRetry(payload: AggregatedMessageBlockDto, signal?: AbortSignal, attempts = 3): Promise<PerceptionResultDto> {
+  private async executeWithRetry(payload: AggregatedMessageBlockDto, signal?: AbortSignal, attempts = 3): Promise<Stage1Response> {
+
     let lastError: Error;
 
     for (let i = 0; i < attempts; i++) {
@@ -138,7 +140,8 @@ export class Stage1PerceptionService implements OnModuleInit {
   /**
    * Internal method called by the Circuit Breaker
    */
-  private async callGeminiInternal(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<PerceptionResultDto> {
+  private async callGeminiInternal(payload: AggregatedMessageBlockDto, signal?: AbortSignal): Promise<Stage1Response> {
+
     const isLongBlock = payload.fullContent.length > 2500; // Rough estimate for 800-1000 tokens
     
     const systemPrompt = `
@@ -180,11 +183,30 @@ export class Stage1PerceptionService implements OnModuleInit {
       try {
         // Robust JSON parsing: handle potential markdown wrapping if it occurs
         const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(cleanedText) as PerceptionResultDto;
+        const perception = JSON.parse(cleanedText) as PerceptionResultDto;
+        
+        // Add heuristic overrides here before returning
+        const isCrisis = this.crisisService.isCrisis(payload.fullContent);
+        const injectionHeuristic = this.injectionService.detect(payload.fullContent);
+        const isInjectionHeuristic = injectionHeuristic.detected && injectionHeuristic.confidence > 0.8;
+
+        perception.is_crisis = isCrisis;
+        perception.is_injection = isInjectionHeuristic || perception.is_injection === true;
+        
+        if (perception.is_injection) {
+          perception.injection_reason = injectionHeuristic.reason || 'AI detected potential prompt manipulation';
+        }
+
+        if (perception.is_crisis || perception.is_injection) {
+          perception.urgency = 10;
+        }
+
+        return { perception, rawResponse: text };
       } catch (e) {
         this.logger.error(`Failed to parse Gemini response: ${text}`);
         throw new Error('Invalid response format from AI');
       }
+
     } catch (error) {
       if (error.name === 'AbortError' || error.message?.includes('AbortError')) {
         throw new Error('AbortError');
