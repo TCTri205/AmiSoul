@@ -17,11 +17,16 @@ export class TokenBudgetManager {
 
   /**
    * Prunes the context data to fit within the token budget.
-   * Priority: UserInput > Persona > Vibe > History (Newest) > Memories
+   * Priority (for preservation): UserInput > Persona > Vibe > History (Newest) > Memories (Oldest)
+   * Priority (for removal): Memories > History (Oldest first) > Vibe
    */
   prune(data: ContextData): ContextData {
-    const pruned = { ...data };
-    
+    const pruned = {
+      ...data,
+      memories: data.memories ? [...data.memories] : [],
+      history: data.history ? [...data.history] : [],
+    };
+
     let currentTokens = this.calculateTotalTokens(pruned);
 
     if (currentTokens <= this.MAX_TOTAL_TOKENS) {
@@ -30,10 +35,10 @@ export class TokenBudgetManager {
 
     this.logger.debug(`Budget exceeded (${currentTokens}/${this.MAX_TOTAL_TOKENS}). Pruning...`);
 
-    // 1. Prune Memories first (oldest or least relevant, here just all if needed)
+    // 1. Prune Memories first (Remove one by one)
     if (pruned.memories && pruned.memories.length > 0) {
       while (currentTokens > this.MAX_TOTAL_TOKENS && pruned.memories.length > 0) {
-        pruned.memories.pop(); // Remove one memory at a time
+        pruned.memories.pop(); // Assuming last added is least important or just simple pop
         currentTokens = this.calculateTotalTokens(pruned);
       }
     }
@@ -46,14 +51,36 @@ export class TokenBudgetManager {
       }
     }
 
-    // 3. Prune Vibe if still over (Rare)
+    // 3. Prune Vibe if still over (XML-aware truncation)
     if (currentTokens > this.MAX_TOTAL_TOKENS && pruned.vibe) {
-      pruned.vibe = pruned.vibe.substring(0, pruned.vibe.length / 2);
-      currentTokens = this.calculateTotalTokens(pruned);
+      while (currentTokens > this.MAX_TOTAL_TOKENS && pruned.vibe.length > 10) {
+        // Truncate by 20% each step for efficiency while checking XML
+        const newLength = Math.floor(pruned.vibe.length * 0.8);
+        pruned.vibe = this.safeXmlTruncate(pruned.vibe, newLength);
+        currentTokens = this.calculateTotalTokens(pruned);
+      }
     }
 
     this.logger.debug(`Pruning complete. Final tokens: ${currentTokens}`);
     return pruned;
+  }
+
+  /**
+   * Truncates a string while ensuring it doesn't end with a broken XML tag.
+   */
+  private safeXmlTruncate(text: string, length: number): string {
+    let truncated = text.substring(0, length);
+    
+    // Check if we cut inside a tag <...>
+    const lastOpen = truncated.lastIndexOf('<');
+    const lastClose = truncated.lastIndexOf('>');
+
+    if (lastOpen > lastClose) {
+      // We are inside a tag, cut back to before the tag started
+      truncated = truncated.substring(0, lastOpen);
+    }
+
+    return truncated.trim();
   }
 
   private calculateTotalTokens(data: ContextData): number {
