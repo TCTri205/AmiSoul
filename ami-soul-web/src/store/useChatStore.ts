@@ -16,6 +16,7 @@ interface ChatState {
   errorTimeoutId: NodeJS.Timeout | null;
   
   // Actions
+  setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
   updateMessageStatus: (id: string, status: Message['status']) => void;
@@ -41,6 +42,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   lastChunkTimestamp: null,
   typingTimeoutId: null,
   errorTimeoutId: null,
+
+  setMessages: (messages) => set({ messages }),
 
   addMessage: (message) => 
     set((state) => ({ 

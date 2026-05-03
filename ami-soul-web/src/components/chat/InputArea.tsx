@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Mic, Plus } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
 import { useSocket } from '@/providers/SocketProvider';
+import { useVibeStore } from '@/store/useVibeStore';
 import ReplyPreview from './ReplyPreview';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +12,7 @@ const InputArea = () => {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { sendMessage } = useSocket();
+  const { connectionStatus } = useVibeStore();
   const { 
     replyToMessage, 
     setReplyToMessage, 
@@ -35,8 +37,11 @@ const InputArea = () => {
       replyToId: replyToMessage?.id
     });
 
-    // Send via socket
-    sendMessage(messageContent, { replyToId: replyToMessage?.id });
+    // Send via socket (or queue if offline)
+    sendMessage(messageContent, { 
+      replyToId: replyToMessage?.id,
+      messageId: tempId
+    });
 
     // Reset state
     setText('');
@@ -62,6 +67,7 @@ const InputArea = () => {
   }, [text]);
 
   const isDisabled = !text.trim() || isStreaming || typingState === 'thinking';
+  const isOffline = connectionStatus !== 'connected';
 
   return (
     <div className="sticky bottom-0 w-full p-4 bg-transparent z-20">
@@ -96,7 +102,9 @@ const InputArea = () => {
                 "p-2 rounded-xl transition-all",
                 isDisabled 
                   ? "bg-foreground/10 text-foreground/30 cursor-not-allowed" 
-                  : "bg-foreground text-background hover:scale-105 active:scale-95"
+                  : isOffline
+                    ? "bg-foreground/50 text-background hover:bg-foreground/60 active:scale-95"
+                    : "bg-foreground text-background hover:scale-105 active:scale-95"
               )}
             >
               <Send className="w-4 h-4" />

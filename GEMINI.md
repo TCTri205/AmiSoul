@@ -1,3 +1,3 @@
-- **Status:** **Sprint-05 (Safe Harbor Frontend)** — `🟡 In Progress (Planning/Docs Finalized)`.
+- **Status:** **Sprint-05 (Safe Harbor Frontend)** — `🟡 In Progress (T5.1-T5.5 Completed)`.
   - **Architecture:** `✅ FrontendArchitecture.md` (Completed & Synced).
-  - **Next Step:** Implement T5.1 (Next.js & Design System).
+  - **Next Step:** Implement T5.6 (Haptic Feedback & Crisis UI).

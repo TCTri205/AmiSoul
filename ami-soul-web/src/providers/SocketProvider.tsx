@@ -1,10 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useChatStore } from '@/store/useChatStore';
 import { useVibeStore } from '@/store/useVibeStore';
-import { generateDeviceId } from '@/lib/utils';
+import { useLocalCache } from '@/hooks/useLocalCache';
+import * as cache from '@/lib/cache';
 import { SOCKET_EVENTS } from '@/types/socket-events';
 import type { 
   MessageMetadata, 
@@ -34,114 +35,157 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const { initializeCache, queueMessage, isOffline } = useLocalCache();
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
-    const token = typeof window !== 'undefined' ? localStorage.getItem('ami_soul_token') : null;
-    const deviceId = generateDeviceId();
+    let socketInstance: Socket | null = null;
+    let isMounted = true;
 
-    const socketInstance = io(socketUrl, {
-      auth: token ? { token } : undefined,
-      query: { device_id: deviceId },
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 30000,
-      randomizationFactor: 0.5,
-    });
+    const init = async () => {
+      const deviceId = await initializeCache();
+      if (!isMounted) return;
 
-    setSocket(socketInstance);
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('ami_soul_token') : null;
 
-    // Connection events
-    socketInstance.on(SOCKET_EVENTS.CONNECT, () => {
-      console.log('[Socket] Connected');
-      useVibeStore.getState().setConnectionStatus('connected');
-    });
-
-    socketInstance.on(SOCKET_EVENTS.DISCONNECT, () => {
-      console.log('[Socket] Disconnected');
-      useVibeStore.getState().setConnectionStatus('disconnected');
-      useVibeStore.getState().setVibe('offline');
-    });
-
-    socketInstance.on(SOCKET_EVENTS.RECONNECT_ATTEMPT, () => {
-      useVibeStore.getState().setConnectionStatus('reconnecting');
-    });
-
-    socketInstance.on(SOCKET_EVENTS.CONNECT_ERROR, (err) => {
-      console.error('[Socket] Connection Error:', err);
-      useVibeStore.getState().setConnectionStatus('disconnected');
-      useVibeStore.getState().setVibe('offline');
-    });
-
-    // Server-sent events
-    socketInstance.on(SOCKET_EVENTS.PROCESSING_START, () => {
-      useChatStore.getState().setTypingState('initial');
-      useChatStore.getState().startTypingTimeout();
-    });
-
-    socketInstance.on(SOCKET_EVENTS.MESSAGE_ACK, (data: MessageAckPayload) => {
-      useChatStore.getState().updateMessageStatus(data.messageId, 'sent');
-    });
-
-    socketInstance.on(SOCKET_EVENTS.AI_RESPONSE, (data: AiResponsePayload) => {
-      useChatStore.getState().clearTypingTimeouts();
-      useChatStore.getState().setTypingState('none');
-      useChatStore.getState().addMessage({
-        id: data.id || `ai_${Date.now()}`,
-        content: data.content,
-        role: (data.role === 'assistant' || data.role === 'user' || data.role === 'system') ? data.role : 'assistant',
-        timestamp: new Date(data.timestamp),
-        status: 'sent',
+      socketInstance = io(socketUrl, {
+        auth: token ? { token } : undefined,
+        query: { device_id: deviceId },
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 30000,
+        randomizationFactor: 0.5,
       });
-    });
 
-    socketInstance.on(SOCKET_EVENTS.STREAM_CHUNK, (data: StreamChunkPayload) => {
-      // Use 'current' as fallback if messageId is missing (MVP compatibility)
-      const messageId = data.messageId || 'current';
-      useChatStore.getState().setStreaming(true);
-      useChatStore.getState().appendChunk(messageId, data.content);
-      
-      if (data.is_complete) {
+      socketRef.current = socketInstance;
+      setSocket(socketInstance);
+
+      // Connection events
+      socketInstance.on(SOCKET_EVENTS.CONNECT, async () => {
+        console.log('[Socket] Connected');
+        useVibeStore.getState().setConnectionStatus('connected');
+        
+        // Process outbox queue on connect
+        const outbox = await cache.getOutbox();
+        if (outbox.length > 0) {
+          console.log(`[Socket] Processing ${outbox.length} queued messages`);
+          for (const msg of outbox) {
+            if (socketInstance) {
+              socketInstance.emit(SOCKET_EVENTS.MESSAGE_SENT, { 
+                content: msg.content, 
+                metadata: msg.metadata 
+              });
+            }
+            if (msg.id) await cache.removeFromOutbox(msg.id);
+          }
+        }
+      });
+
+      socketInstance.on(SOCKET_EVENTS.DISCONNECT, () => {
+        console.log('[Socket] Disconnected');
+        useVibeStore.getState().setConnectionStatus('disconnected');
+        useVibeStore.getState().setVibe('offline');
+        
+        // Clear typing state on disconnect
+        useChatStore.getState().clearTypingTimeouts();
+        useChatStore.getState().setTypingState('none');
+      });
+
+      socketInstance.on(SOCKET_EVENTS.RECONNECT_ATTEMPT, () => {
+        useVibeStore.getState().setConnectionStatus('reconnecting');
+      });
+
+      socketInstance.on(SOCKET_EVENTS.CONNECT_ERROR, (err) => {
+        console.error('[Socket] Connection Error:', err);
+        useVibeStore.getState().setConnectionStatus('disconnected');
+        useVibeStore.getState().setVibe('offline');
+      });
+
+      // Server-sent events
+      socketInstance.on(SOCKET_EVENTS.PROCESSING_START, () => {
+        useChatStore.getState().setTypingState('initial');
+        useChatStore.getState().startTypingTimeout();
+      });
+
+      socketInstance.on(SOCKET_EVENTS.MESSAGE_ACK, (data: MessageAckPayload) => {
+        useChatStore.getState().updateMessageStatus(data.messageId, 'sent');
+      });
+
+      socketInstance.on(SOCKET_EVENTS.AI_RESPONSE, (data: AiResponsePayload) => {
+        useChatStore.getState().clearTypingTimeouts();
+        useChatStore.getState().setTypingState('none');
+        useChatStore.getState().addMessage({
+          id: data.id || `ai_${Date.now()}`,
+          content: data.content,
+          role: (data.role === 'assistant' || data.role === 'user' || data.role === 'system') ? data.role : 'assistant',
+          timestamp: new Date(data.timestamp),
+          status: 'sent',
+        });
+      });
+
+      socketInstance.on(SOCKET_EVENTS.STREAM_CHUNK, (data: StreamChunkPayload) => {
+        const messageId = data.messageId || 'current';
+        useChatStore.getState().setStreaming(true);
+        useChatStore.getState().appendChunk(messageId, data.content);
+        
+        if (data.is_complete) {
+          useChatStore.getState().finalizeStream(messageId);
+        }
+      });
+
+      socketInstance.on(SOCKET_EVENTS.STREAM_END, (data: { messageId?: string }) => {
+        const messageId = (data && data.messageId) || 'current';
         useChatStore.getState().finalizeStream(messageId);
-      }
-    });
+      });
 
-    socketInstance.on(SOCKET_EVENTS.STREAM_END, (data: { messageId?: string }) => {
-      const messageId = (data && data.messageId) || 'current';
-      useChatStore.getState().finalizeStream(messageId);
-    });
+      socketInstance.on(SOCKET_EVENTS.VIBE_UPDATE, (data: VibeUpdatePayload) => {
+        useVibeStore.getState().setVibe(data.vibe);
+      });
 
-    socketInstance.on(SOCKET_EVENTS.VIBE_UPDATE, (data: VibeUpdatePayload) => {
-      useVibeStore.getState().setVibe(data.vibe);
-    });
+      socketInstance.on(SOCKET_EVENTS.ERROR, (err: SocketErrorPayload) => {
+        console.error('[Socket] Server Error:', err);
+      });
+    };
 
-    socketInstance.on(SOCKET_EVENTS.ERROR, (err: SocketErrorPayload) => {
-      console.error('[Socket] Server Error:', err);
-    });
+    init();
 
     return () => {
-      socketInstance.disconnect();
+      isMounted = false;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      if (socketInstance) {
+        socketInstance.disconnect();
+      }
     };
-  }, []);
+  }, [initializeCache]);
 
   const sendMessage = useCallback((content: string, metadata?: MessageMetadata) => {
-    if (socket) {
-      socket.emit(SOCKET_EVENTS.MESSAGE_SENT, { content, metadata });
+    if (isOffline()) {
+      console.log('[Socket] Offline: Queuing message');
+      queueMessage(content, metadata);
+      return;
     }
-  }, [socket]);
+
+    if (socketRef.current) {
+      socketRef.current.emit(SOCKET_EVENTS.MESSAGE_SENT, { content, metadata });
+    }
+  }, [isOffline, queueMessage]);
 
   const sendInterrupt = useCallback((payload?: { messageId?: string }) => {
-    if (socket) {
-      socket.emit(SOCKET_EVENTS.INTERRUPT, payload);
+    if (socketRef.current) {
+      socketRef.current.emit(SOCKET_EVENTS.INTERRUPT, payload);
     }
-  }, [socket]);
+  }, []);
 
   const sendReaction = useCallback((messageId: string, emoji: string) => {
-    if (socket) {
-      socket.emit(SOCKET_EVENTS.MESSAGE_REACTION, { messageId, emoji });
+    if (socketRef.current) {
+      socketRef.current.emit(SOCKET_EVENTS.MESSAGE_REACTION, { messageId, emoji });
     }
-  }, [socket]);
+  }, []);
 
   const value: SocketContextValue = {
     socket,
