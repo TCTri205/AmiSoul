@@ -51,6 +51,7 @@ describe('IdentityService', () => {
 
     const payload: AggregatedMessageBlockDto = {
       userId: 'user1',
+      sessionId: 'session1',
       messages: [
         { content: 'Hello', timestamp: new Date(2000, 1, 1, 10, 0, 0).toISOString() },
         { content: 'Very fast message block', timestamp: new Date(2000, 1, 1, 10, 0, 1).toISOString() },
@@ -78,6 +79,7 @@ describe('IdentityService', () => {
 
     const payload: AggregatedMessageBlockDto = {
       userId: 'user1',
+      sessionId: 'session1',
       messages: [
         { content: 'Word', timestamp: new Date(2000, 1, 1, 10, 0, 0).toISOString() },
         { content: 'Another word here', timestamp: new Date(2000, 1, 1, 10, 0, 2).toISOString() },
@@ -104,6 +106,7 @@ describe('IdentityService', () => {
 
     const payload: AggregatedMessageBlockDto = {
       userId: 'user1',
+      sessionId: 'session1',
       messages: [
         { content: 'A message', timestamp: new Date(2000, 1, 1, 10, 0, 0).toISOString() },
         { content: 'B message', timestamp: new Date(2000, 1, 1, 10, 0, 2).toISOString() },

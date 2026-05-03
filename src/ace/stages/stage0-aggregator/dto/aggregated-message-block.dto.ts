@@ -2,6 +2,7 @@ import { SessionType } from '../../../../chat/dto/message.dto';
 
 export class AggregatedMessageBlockDto {
   userId: string;
+  sessionId: string;
   messages: {
     content: string;
     timestamp: string;

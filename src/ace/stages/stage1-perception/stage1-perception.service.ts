@@ -106,7 +106,7 @@ export class Stage1PerceptionService implements OnModuleInit {
 
   private async executeWithRetry(payload: AggregatedMessageBlockDto, signal?: AbortSignal, attempts = 3): Promise<Stage1Response> {
 
-    let lastError: Error;
+    let lastError: Error = new Error('Stage 1 processing failed after multiple attempts');
 
     for (let i = 0; i < attempts; i++) {
       if (signal?.aborted) {
@@ -115,7 +115,7 @@ export class Stage1PerceptionService implements OnModuleInit {
 
       try {
         // The fire method passes arguments to the protected function (callGeminiInternal)
-        return await this.breaker.fire(payload, signal);
+        return await this.breaker.fire(payload, signal) as Stage1Response;
       } catch (error) {
         lastError = error;
 

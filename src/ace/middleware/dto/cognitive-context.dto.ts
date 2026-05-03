@@ -12,6 +12,6 @@ export class CognitiveContext {
 
   constructor(partial: Partial<CognitiveContext>) {
     Object.assign(this, partial);
-    this.timestamp = this.timestamp || new Date();
+    this.timestamp = partial.timestamp ?? new Date();
   }
 }

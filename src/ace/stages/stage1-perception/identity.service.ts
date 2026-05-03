@@ -49,7 +49,11 @@ export class IdentityService {
       signature = JSON.parse(signatureRaw);
     } catch (e) {
       this.logger.error(`Failed to parse behavioral signature for ${userId}: ${e.message}`);
-      return { anomalyScore: 0, isBypassed: true };
+      return { 
+        anomalyScore: 0, 
+        isBypassed: true, 
+        reason: 'Error: Failed to parse behavioral signature' 
+      };
     }
 
     // 3. Calculate Current Metrics
@@ -146,6 +150,11 @@ export class IdentityService {
     const startTs = new Date(payload.messages[0].timestamp).getTime();
     const endTs = new Date(payload.messages[payload.messages.length - 1].timestamp).getTime();
     
+    if (isNaN(startTs) || isNaN(endTs)) {
+      this.logger.warn(`Invalid timestamp in message block for user ${payload.userId}`);
+      return null;
+    }
+
     const durationSeconds = Math.max((endTs - startTs) / 1000, 1);
 
     return {

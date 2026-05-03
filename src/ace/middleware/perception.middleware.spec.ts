@@ -138,9 +138,18 @@ describe('PerceptionMiddleware', () => {
 
     it('should merge existing perception and prioritize heuristic safety flags', () => {
       const raw = '{"intent":"sharing","is_crisis":false}';
-      const existing: Partial<PerceptionResultDto> = {
+      const existing: PerceptionResultDto = {
+        intent: 'sharing',
+        sentiment: 'neutral',
         complexity: 10,
+        urgency: 5,
+        identity_anomaly: false,
+        routing_confidence: 0.9,
+        sarcasm_hint: false,
+        timestamp_flag: false,
+        noise_flag: false,
         is_crisis: true, // Heuristic says true
+        is_injection: false,
       };
       
       const context = middleware.transform(raw, mockPayload, existing as any);

@@ -90,7 +90,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     this.logger.log(`Message received from ${user.username || user.id}: ${data.content} [${sessionType}]`);
 
     // Logic for Stage 0 (Aggregator)
-    await this.aggregatorService.aggregateMessage(user.id, data, sessionType);
+    await this.aggregatorService.aggregateMessage(user.id, client.id, data, sessionType);
 
     const duration = Date.now() - startTime;
     this.logger.log(`Gateway processing time: ${duration}ms`);

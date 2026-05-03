@@ -40,7 +40,7 @@ describe('CrisisService', () => {
 
     it('should return false for empty or null strings', () => {
       expect(service.isCrisis('')).toBe(false);
-      expect(service.isCrisis(null)).toBe(false);
+      expect(service.isCrisis(null as any)).toBe(false);
     });
   });
 

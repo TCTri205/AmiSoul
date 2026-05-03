@@ -66,7 +66,7 @@ export class AcePipelineService {
         await this.runFastPath(context, signal);
       }
 
-      this.logger.log(`ACE Pipeline completed successfully for user: ${userId} (${context.routingPath.toUpperCase()} Path)`);
+      this.logger.log(`ACE Pipeline completed successfully for user: ${userId} (${context.routingPath?.toUpperCase() || 'UNKNOWN'} Path)`);
 
       
     } catch (error) {
@@ -200,7 +200,7 @@ export class AcePipelineService {
     const securityMessage = "Tôi xin lỗi, nhưng tôi không thể thực hiện yêu cầu này vì nó vi phạm chính sách an toàn hoặc chứa các chỉ lệnh không phù hợp. Hãy trò chuyện với tôi một cách tự nhiên nhé! 😊";
     
     // Log the attack attempt with the specific reason
-    this.logger.warn(`SECURITY ALERT: Prompt Injection attempt by user ${userId}. Reason: ${perception.injection_reason}. Content: "${payload.fullContent.substring(0, 100)}..."`);
+    this.logger.warn(`SECURITY ALERT: Prompt Injection attempt by user ${userId}. Reason: ${perception.injection_reason}. Content: "${payload.fullContent?.substring(0, 100) || 'N/A'}..."`);
 
     // Emit security override event
     this.eventEmitter.emit('pipeline.security_override', {

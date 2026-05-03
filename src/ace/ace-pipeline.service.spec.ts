@@ -6,6 +6,7 @@ import { CrisisService } from './stages/stage1-perception/crisis.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SessionType } from '../chat/dto/message.dto';
+import { PerceptionMiddleware } from './middleware/perception.middleware';
 
 describe('AcePipelineService', () => {
   let service: AcePipelineService;
@@ -16,6 +17,7 @@ describe('AcePipelineService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AcePipelineService,
+        PerceptionMiddleware,
         {
           provide: Stage1PerceptionService,
           useValue: {
@@ -76,7 +78,10 @@ describe('AcePipelineService', () => {
       identity_anomaly: false,
     };
 
-    (stage1.process as jest.Mock).mockResolvedValue(mockPerception);
+    (stage1.process as jest.Mock).mockResolvedValue({
+      perception: mockPerception,
+      rawResponse: JSON.stringify(mockPerception),
+    });
 
     await service.handleAggregatedBlock(payload as any);
 

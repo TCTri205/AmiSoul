@@ -26,7 +26,7 @@ export class Stage0AggregatorService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async aggregateMessage(userId: string, data: MessageSentDto, sessionType: SessionType) {
+  async aggregateMessage(userId: string, sessionId: string, data: MessageSentDto, sessionType: SessionType) {
     const bufferKey = `buffer:${userId}`;
     const debounceKey = `debounce:${userId}`;
     
@@ -55,7 +55,7 @@ export class Stage0AggregatorService {
       if (this.hardCapTimers.has(userId)) {
         clearTimeout(this.hardCapTimers.get(userId));
       }
-      const hardCapTimer = setTimeout(() => this.flushBuffer(userId, sessionType), this.HARD_CAP_TIME);
+      const hardCapTimer = setTimeout(() => this.flushBuffer(userId, sessionId, sessionType), this.HARD_CAP_TIME);
       this.hardCapTimers.set(userId, hardCapTimer);
     } else {
       // Existing block, reset debounce
@@ -66,7 +66,7 @@ export class Stage0AggregatorService {
     // 3. Immediate flush if Hard Cap (count) is reached
     if (currentQueueLength >= this.MAX_MESSAGES_PER_BLOCK) {
       this.logger.log(`Hard Cap (count) reached for user: ${userId}. Flushing...`);
-      return this.flushBuffer(userId, sessionType);
+      return this.flushBuffer(userId, sessionId, sessionType);
     }
 
     // 4. Update/Reset local debounce timer
@@ -74,11 +74,11 @@ export class Stage0AggregatorService {
       clearTimeout(this.debounceTimers.get(userId));
     }
     
-    const debounceTimer = setTimeout(() => this.flushBuffer(userId, sessionType), this.DEBOUNCE_TIME);
+    const debounceTimer = setTimeout(() => this.flushBuffer(userId, sessionId, sessionType), this.DEBOUNCE_TIME);
     this.debounceTimers.set(userId, debounceTimer);
   }
 
-  async flushBuffer(userId: string, sessionType: SessionType) {
+  async flushBuffer(userId: string, sessionId: string, sessionType: SessionType) {
     // Clear timers
     if (this.debounceTimers.has(userId)) {
       clearTimeout(this.debounceTimers.get(userId));
@@ -113,6 +113,7 @@ export class Stage0AggregatorService {
 
     const aggregatedBlock: AggregatedMessageBlockDto = {
       userId,
+      sessionId,
       messages,
       sessionType,
       fullContent,

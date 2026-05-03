@@ -71,6 +71,7 @@ describe('Stage1PerceptionService', () => {
   describe('process', () => {
     const payload: AggregatedMessageBlockDto = {
       userId: 'user1',
+      sessionId: 'session1',
       messages: [{ content: 'hello', timestamp: '' }],
       sessionType: SessionType.PERSISTENT,
       fullContent: 'hello',
@@ -99,7 +100,7 @@ describe('Stage1PerceptionService', () => {
 
       const result = await service.process(payload);
 
-      expect(result).toEqual({ ...mockResult, is_crisis: false, is_injection: false });
+      expect(result.perception).toEqual({ ...mockResult, is_crisis: false, is_injection: false });
       expect(mockModel.generateContent).toHaveBeenCalled();
     });
 
@@ -108,7 +109,7 @@ describe('Stage1PerceptionService', () => {
 
       const result = await service.process(payload);
 
-      expect(result).toEqual({
+      expect(result.perception).toEqual({
         intent: 'unknown',
         sentiment: 'neutral',
         complexity: 5,
@@ -145,7 +146,7 @@ describe('Stage1PerceptionService', () => {
 
       const result = await service.process(payload);
 
-      expect(result.intent).toBe('greeting');
+      expect(result.perception.intent).toBe('greeting');
       expect(mockModel.generateContent).toHaveBeenCalledTimes(3);
     });
 
@@ -174,7 +175,7 @@ describe('Stage1PerceptionService', () => {
       
       expect(mockModel.generateContent).not.toHaveBeenCalled();
       // Should still return fallback even when circuit is open
-      expect(result.intent).toBe('unknown');
+      expect(result.perception.intent).toBe('unknown');
     });
 
     it('should flag crisis and set max urgency when CrisisService returns true', async () => {
@@ -202,8 +203,8 @@ describe('Stage1PerceptionService', () => {
 
       const result = await service.process(crisisPayload);
 
-      expect(result.is_crisis).toBe(true);
-      expect(result.urgency).toBe(10);
+      expect(result.perception.is_crisis).toBe(true);
+      expect(result.perception.urgency).toBe(10);
     });
   });
 });

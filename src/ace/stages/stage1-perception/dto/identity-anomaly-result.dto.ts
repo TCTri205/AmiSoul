@@ -5,5 +5,6 @@ export class IdentityAnomalyResultDto {
   metrics?: {
     typingSpeed: number;
     sentenceLength: number;
+    words: string[];
   };
 }
