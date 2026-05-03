@@ -44,51 +44,72 @@ export class ContextRetrieverService {
       const dpeModel = user?.dpe ?? {};
 
       // 3. Rank memories using Affective Retrieval formula
-      const rankedMemories = this.rankMemories(similarMemories, vibe);
+      const rankedMemories = this.rankMemories(similarMemories, vibe, calEvents);
 
       // 4. Apply Bonding Filter
       const filteredMemories = this.filterByBonding(rankedMemories, bondingScore);
 
       // 5. Apply Token Budgeting & Truncation (Truth Hierarchy Priority)
-      // Budget: Persona (500), Vibe (200), Memories (800), History (Rest)
+      // Hierarchy & Budget (Total 3000 tokens):
+      // 1. Persona/Bonding/DPE: 500
+      // 2. Session Vibe: 200
+      // 3. Knowledge (CAL > CMA): 800
+      // 4. History: Rest (~1500)
       
+      // Budget 1 & 2: Vibe
       const vibeTokens = this.estimateTokens(vibe);
-      const truncatedVibe = vibeTokens > 200 ? vibe.substring(0, 800) : vibe; // Rough truncate
+      const truncatedVibe = vibeTokens > 200 ? vibe.substring(0, 800) : vibe;
 
-      // Truncate memories to stay within 800 tokens
-      let currentMemoryTokens = 0;
-      const memoryBudget = 800;
-      const budgetMemories: StoredMemory[] = [];
-
-      for (const mem of filteredMemories) {
-        const tokens = this.estimateTokens(mem.content);
-        if (currentMemoryTokens + tokens <= memoryBudget) {
-          budgetMemories.push(mem);
-          currentMemoryTokens += tokens;
-        } else {
-          break; // Stop when budget exceeded
-        }
+      // Budget 3: Knowledge (CAL first, then CMA) - Shared 800 tokens
+      const KNOWLEDGE_BUDGET = 800;
+      let usedKnowledgeTokens = 0;
+      
+      // Fill CAL first (CAL > CMA)
+      const budgetCal: CalEvent[] = [];
+      for (const event of calEvents) {
+        // Estimate tokens of the whole event object
+        const tokens = this.estimateTokens(JSON.stringify(event));
+        if (usedKnowledgeTokens + tokens <= KNOWLEDGE_BUDGET) {
+          budgetCal.push(event);
+          usedKnowledgeTokens += tokens;
+        } else break;
       }
+
+      // Fill remaining with CMA
+      const budgetMemories: StoredMemory[] = [];
+      for (const mem of filteredMemories) {
+        // Estimate tokens of the whole memory object to be more accurate
+        const tokens = this.estimateTokens(JSON.stringify(mem));
+        if (usedKnowledgeTokens + tokens <= KNOWLEDGE_BUDGET) {
+          budgetMemories.push(mem);
+          usedKnowledgeTokens += tokens;
+        } else break;
+      }
+
+      // Budget 4: DPE & Bonding (Target: Fit with Persona in 500 tokens)
+      const dpeString = JSON.stringify(dpeModel);
+      const dpeTokens = this.estimateTokens(dpeString);
+      const finalDpe = dpeTokens > 200 ? dpeString.substring(0, 700) + '... [Truncated]' : dpeModel;
 
       // 6. Build final context
       const result: RetrievedContextDto = {
         memories: budgetMemories,
-        calEvents,
+        calEvents: budgetCal,
         bondingScore,
         sessionVibe: truncatedVibe,
         personaShield: PERSONA_SHIELD,
-        userPersonaModel: dpeModel,
+        userPersonaModel: finalDpe,
         tokenEstimates: {
           persona: this.estimateTokens(PERSONA_SHIELD),
           vibe: this.estimateTokens(truncatedVibe),
-          memories: currentMemoryTokens,
-          cal: this.estimateTokens(JSON.stringify(calEvents)),
+          memories: this.estimateTokens(JSON.stringify(budgetMemories)),
+          cal: this.estimateTokens(JSON.stringify(budgetCal)),
           history: 0, // Will be calculated in Stage 3
-          dpe: this.estimateTokens(JSON.stringify(dpeModel)),
+          dpe: this.estimateTokens(JSON.stringify(finalDpe)),
         },
       };
 
-      this.logger.log(`Stage 2: Retrieved ${result.memories.length} memories, Bonding: ${bondingScore}, Vibe: ${vibe}`);
+      this.logger.log(`Stage 2: Knowledge Budget Used: ${usedKnowledgeTokens}/${KNOWLEDGE_BUDGET}, Bonding: ${bondingScore}`);
       return result;
 
     } catch (error) {
@@ -103,7 +124,16 @@ export class ContextRetrieverService {
         calEvents: [],
         bondingScore: 0,
         sessionVibe: 'neutral',
-        tokenEstimates: { memories: 0, cal: 0, history: 0 },
+        personaShield: PERSONA_SHIELD,
+        userPersonaModel: {},
+        tokenEstimates: { 
+          persona: this.estimateTokens(PERSONA_SHIELD),
+          vibe: 0,
+          memories: 0, 
+          cal: 0, 
+          history: 0,
+          dpe: 0 
+        },
       };
     }
   }
@@ -145,23 +175,38 @@ export class ContextRetrieverService {
     return events;
   }
 
-  private rankMemories(memories: any[], currentVibe: string): StoredMemory[] {
+  private rankMemories(memories: any[], currentVibe: string, calEvents: CalEvent[]): StoredMemory[] {
     const now = new Date();
+    
+    // Extract keywords from CAL events for relevance boosting
+    const calKeywords = new Set<string>();
+    calEvents.forEach(e => {
+      const words = e.event.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      words.forEach(w => calKeywords.add(w));
+    });
 
     return memories.map(memory => {
       const vectorSim = memory.similarity || 0;
       
-      // Affective Alignment (0.0 to 1.0)
+      // 1. Affective Alignment (0.0 to 1.0)
       const memorySentiment = memory.metadata?.sentiment || 'neutral';
       const affectiveAlign = this.calculateAffectiveAlignment(memorySentiment, currentVibe);
 
-      // Recency Weight (0.0 to 1.0)
+      // 2. Recency Weight (0.0 to 1.0)
       const createdAt = new Date(memory.createdAt);
       const daysOld = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
       const recency = Math.max(0, 1 - daysOld / 365); // Decay over 1 year
 
-      // Formula: Score = (0.5 * Vector_Sim) + (0.3 * Affective_Align) + (0.2 * Recency)
-      const retrievalScore = (0.5 * vectorSim) + (0.3 * affectiveAlign) + (0.2 * recency);
+      // 3. CAL Relevance (0.0 to 1.0)
+      let calRelevance = 0;
+      if (calKeywords.size > 0) {
+        const memoryWords = memory.content.toLowerCase().split(/\s+/);
+        const matches = memoryWords.filter(w => calKeywords.has(w)).length;
+        calRelevance = Math.min(1.0, matches / 3); // Max boost at 3 matches
+      }
+
+      // Formula: Score = (0.4 * Vector_Sim) + (0.2 * Affective_Align) + (0.2 * Recency) + (0.2 * CAL_Relevance)
+      const retrievalScore = (0.4 * vectorSim) + (0.2 * affectiveAlign) + (0.2 * recency) + (0.2 * calRelevance);
 
       return {
         ...memory,

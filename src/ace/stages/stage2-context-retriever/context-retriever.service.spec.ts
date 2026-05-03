@@ -132,6 +132,87 @@ describe('ContextRetrieverService', () => {
       expect(result.tokenEstimates.memories).toBeLessThanOrEqual(800);
     });
 
+    it('should truncate Knowledge (CAL + CMA) to a combined 800 token budget with CAL priority', async () => {
+      orchestrator.embed.mockResolvedValue([0.1]);
+      
+      // 5 large CAL events (approx 100 tokens each = 500 tokens)
+      const largeCal = Array.from({ length: 5 }, (_, i) => ({ event: 'A'.repeat(400), type: 'pending' as const }));
+      
+      // 5 large CMA memories (approx 100 tokens each = 500 tokens)
+      const mockMemories = Array.from({ length: 5 }, (_, i) => ({
+        id: `mem-${i}`,
+        content: 'B'.repeat(400),
+        similarity: 0.9,
+        createdAt: new Date(),
+        metadata: { type: 'episodic' },
+      }));
+
+      prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
+      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: {} } as any);
+      redis.get.mockImplementation(async (key) => {
+        if (key.includes('cal:pending')) return JSON.stringify(largeCal);
+        return null;
+      });
+
+      const result = await service.retrieve(context);
+
+      // CAL should have 5 items (500 tokens)
+      // Remaining 300 tokens can fit 3 CMA memories
+      expect(result.calEvents).toHaveLength(5);
+      expect(result.memories.length).toBeLessThan(5);
+      
+      const totalKnowledge = result.tokenEstimates.cal + result.tokenEstimates.memories;
+      expect(totalKnowledge).toBeLessThanOrEqual(950); // Allowing some buffer for stringify overhead
+    });
+
+    it('should truncate DPE model that exceeds the 200 token budget', async () => {
+      orchestrator.embed.mockResolvedValue([0.1]);
+      prisma.searchSimilarMemories.mockResolvedValue([]);
+      
+      const largeDpe = { traits: 'A'.repeat(1000) };
+      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: largeDpe } as any);
+      redis.get.mockResolvedValue(null);
+
+      const result = await service.retrieve(context);
+
+      expect(result.tokenEstimates.dpe).toBeLessThanOrEqual(200);
+    });
+
+    it('should boost memories that are relevant to CAL events', async () => {
+      orchestrator.embed.mockResolvedValue([0.1]);
+      
+      const mockMemories = [
+        {
+          id: 'mem-1',
+          content: 'I love going to the beach',
+          similarity: 0.8,
+          createdAt: new Date(),
+          metadata: { sentiment: 'positive', type: 'episodic' },
+        },
+        {
+          id: 'mem-2',
+          content: 'The mountains are beautiful',
+          similarity: 0.8,
+          createdAt: new Date(),
+          metadata: { sentiment: 'positive', type: 'episodic' },
+        }
+      ];
+      
+      prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
+      prisma.user.findUnique.mockResolvedValue({ bondingScore: 50, dpe: {} } as any);
+      
+      // CAL event about "beach"
+      redis.get.mockImplementation(async (key) => {
+        if (key.includes('cal:expectations')) return JSON.stringify([{ event: 'Going to the beach tomorrow' }]);
+        return null;
+      });
+
+      const result = await service.retrieve(context);
+
+      expect(result.memories[0].id).toBe('mem-1'); // Boosted by CAL
+      expect(result.memories[0].retrievalScore).toBeGreaterThan(result.memories[1].retrievalScore);
+    });
+
     it('should filter memories for strangers (bonding <= 20)', async () => {
       orchestrator.embed.mockResolvedValue([0.1, 0.2]);
       
