@@ -100,6 +100,29 @@
     animation: drift 20s ease-in-out infinite;
   }
 
+  @keyframes drift-1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(3%, 3%) scale(1.05); }
+  }
+  @keyframes drift-2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-2%, 2%) scale(1.05); }
+  }
+  @keyframes drift-3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(2%, -3%) scale(1.05); }
+  }
+
+  .animate-drift-1 { animation: drift-1 20s ease-in-out infinite; }
+  .animate-drift-2 { animation: drift-2 20s ease-in-out infinite; }
+  .animate-drift-3 { animation: drift-3 20s ease-in-out infinite; }
+
+  .vibe-blob {
+    @apply absolute rounded-full filter blur-[120px] opacity-80;
+    transition: background-color 4000ms ease-in-out;
+    will-change: transform, background-color;
+  }
+
   .glass {
     @apply bg-white/20 dark:bg-black/20 backdrop-blur-md border border-white/20 dark:border-black/20 shadow-xl;
   }

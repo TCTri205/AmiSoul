@@ -14,7 +14,7 @@ interface MessageBubbleProps {
   showTimestamp?: boolean;
 }
 
-const ActionTag = ({ children }: { children: React.ReactNode }) => (
+const ActionTag = ({ children }: { children?: React.ReactNode }) => (
   <span className="text-[0.75em] text-foreground/50 italic font-medium mx-1 opacity-80">
     {children}
   </span>
@@ -31,7 +31,7 @@ const MessageBubble = ({
 
   // Custom component for markdown to handle *action* text
   const components = {
-    em: ({ children }: { children: React.ReactNode }) => {
+    em: ({ children }: { children?: React.ReactNode }) => {
       // If it looks like an action (e.g. *smiles*)
       return <ActionTag>*{children}*</ActionTag>;
     },

@@ -2,7 +2,6 @@
 
 import React, { useMemo } from 'react';
 import { useVibeStore } from '@/store/useVibeStore';
-import { cn } from '@/lib/utils';
 import { SessionVibe } from '@/types/vibe';
 
 export const VibeBackground = () => {
@@ -20,14 +19,22 @@ export const VibeBackground = () => {
   const currentColors = vibeColors[sessionVibe] || vibeColors.neutral;
 
   return (
-    <div 
-      className={cn(
-        "fixed inset-0 z-0 animate-drift transition-all duration-[3000ms] ease-in-out",
-      )}
-      style={{
-        background: `linear-gradient(135deg, hsl(${currentColors[0]}), hsl(${currentColors[1]}), hsl(${currentColors[2]}))`,
-        backgroundSize: '200% 200%',
-      }}
-    />
+    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+      {/* Blob 1 - Primary color */}
+      <div 
+        className="vibe-blob w-[150%] h-[150%] -top-[25%] -left-[25%] animate-drift-1"
+        style={{ backgroundColor: `hsl(${currentColors[0]})` }}
+      />
+      {/* Blob 2 - Secondary color */}
+      <div 
+        className="vibe-blob w-[150%] h-[150%] -top-[25%] -left-[25%] animate-drift-2"
+        style={{ backgroundColor: `hsl(${currentColors[1]})` }}
+      />
+      {/* Blob 3 - Accent/Background blend */}
+      <div 
+        className="vibe-blob w-[150%] h-[150%] -top-[25%] -left-[25%] animate-drift-3"
+        style={{ backgroundColor: `hsl(${currentColors[2]})` }}
+      />
+    </div>
   );
 };
