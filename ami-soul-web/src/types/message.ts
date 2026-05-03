@@ -13,6 +13,7 @@ export interface Message {
   status: 'sending' | 'sent' | 'error';
   reactions?: Reaction[];
   replyToId?: string;
+  isCrisis?: boolean;
 }
 
 export interface StreamChunk {

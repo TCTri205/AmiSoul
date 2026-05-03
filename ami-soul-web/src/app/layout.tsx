@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { SocketProvider } from "@/providers/SocketProvider";
 import { VibeBackground } from "@/components/vibe/VibeBackground";
+import SettingsDialog from "@/components/layout/SettingsDialog";
 
 const inter = Inter({ 
   subsets: ["latin"], 
@@ -45,6 +46,7 @@ export default function RootLayout({
       >
         <SocketProvider>
           <VibeBackground />
+          <SettingsDialog />
           <main className="relative z-10 flex h-[100dvh] flex-col overflow-hidden">
             {children}
           </main>

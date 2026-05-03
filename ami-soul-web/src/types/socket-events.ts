@@ -12,6 +12,7 @@ export const SOCKET_EVENTS = {
   PROCESSING_START: 'processing_start', // AI started thinking
   MESSAGE_ACK: 'message_ack',         // Message received and buffered
   AI_RESPONSE: 'ai_response',         // Full AI message (not streamed)
+  CRISIS_RESPONSE: 'crisis_response', // AI crisis/safety message
   ERROR: 'error',                     // Generic error
 
   // Client -> Server

@@ -3,10 +3,12 @@
 import React from 'react';
 import { Settings } from 'lucide-react';
 import { useVibeStore } from '@/store/useVibeStore';
+import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/lib/utils';
 
 const Header = () => {
   const { connectionStatus } = useVibeStore();
+  const { toggleSettings } = useUIStore();
   
   const statusColor = {
     connected: 'bg-green-500',
@@ -41,7 +43,10 @@ const Header = () => {
         </div>
       </div>
 
-      <button className="p-2 hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group">
+      <button 
+        onClick={() => toggleSettings()}
+        className="p-2 hover:bg-white/10 dark:hover:bg-white/5 rounded-full transition-colors group"
+      >
         <Settings className="w-5 h-5 text-foreground/60 group-hover:text-foreground/90" />
       </button>
     </header>

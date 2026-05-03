@@ -27,14 +27,29 @@ const MessageBubble = ({
   showTimestamp = false 
 }: MessageBubbleProps) => {
   const isUser = message.role === 'user';
+  const isCrisis = message.isCrisis;
   const content = isStreaming ? streamingContent : message.content;
 
-  // Custom component for markdown to handle *action* text
+  // Custom component for markdown to handle *action* text and tel links
   const components = {
     em: ({ children }: { children?: React.ReactNode }) => {
       // If it looks like an action (e.g. *smiles*)
       return <ActionTag>*{children}*</ActionTag>;
     },
+    a: ({ href, children }: { href?: string, children?: React.ReactNode }) => {
+      const isTel = href?.startsWith('tel:');
+      return (
+        <a 
+          href={href} 
+          className={cn(
+            "underline underline-offset-2 transition-colors",
+            isTel ? "text-blue-500 font-bold hover:text-blue-600 dark:text-blue-400" : "text-primary"
+          )}
+        >
+          {children}
+        </a>
+      );
+    }
   };
 
   return (
@@ -49,10 +64,15 @@ const MessageBubble = ({
     >
       <div
         className={cn(
-          "relative px-4 py-3 backdrop-blur-md shadow-sm",
+          "relative px-4 py-3 backdrop-blur-md shadow-sm transition-all duration-500",
           isUser 
             ? "bg-white/30 dark:bg-white/10 text-foreground rounded-2xl rounded-br-md border border-white/20 dark:border-white/10" 
-            : "bg-white/10 dark:bg-black/40 text-foreground rounded-2xl rounded-bl-md border border-white/10 dark:border-white/5 shadow-inner"
+            : cn(
+                "bg-white/10 dark:bg-black/40 text-foreground rounded-2xl rounded-bl-md border shadow-inner",
+                isCrisis 
+                  ? "border-blue-400/50 bg-blue-50/5 dark:bg-blue-900/10 shadow-blue-500/10" 
+                  : "border-white/10 dark:border-white/5"
+              )
         )}
       >
         <div className="prose prose-sm dark:prose-invert max-w-none">

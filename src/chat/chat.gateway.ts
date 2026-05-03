@@ -144,12 +144,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   handleSafetyOverride(payload: { userId: string; content: string; perception: any }) {
     this.logger.warn(`Emitting Safety Response for user: ${payload.userId}`);
 
-    this.server.to(`user:${payload.userId}`).emit('ai_response', {
+    this.server.to(`user:${payload.userId}`).emit('crisis_response', {
+      id: `crisis_${Date.now()}`,
       content: payload.content,
-      role: 'system_safety',
+      role: 'assistant',
       metadata: {
         is_crisis: true,
         urgency: 10,
+        perception: payload.perception,
       },
       timestamp: new Date().toISOString(),
     });

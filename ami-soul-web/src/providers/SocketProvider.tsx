@@ -5,6 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import { useChatStore } from '@/store/useChatStore';
 import { useVibeStore } from '@/store/useVibeStore';
 import { useLocalCache } from '@/hooks/useLocalCache';
+import { useHapticFeedback } from '@/components/vibe/HapticFeedback';
 import * as cache from '@/lib/cache';
 import { SOCKET_EVENTS } from '@/types/socket-events';
 import type { 
@@ -36,7 +37,17 @@ export const useSocket = () => {
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const { initializeCache, queueMessage, isOffline } = useLocalCache();
+  const { triggerStrong, triggerSoft } = useHapticFeedback();
   const socketRef = useRef<Socket | null>(null);
+
+  // Use refs for triggers to prevent socket reconnection when settings change
+  const triggerStrongRef = useRef(triggerStrong);
+  const triggerSoftRef = useRef(triggerSoft);
+
+  useEffect(() => {
+    triggerStrongRef.current = triggerStrong;
+    triggerSoftRef.current = triggerSoft;
+  }, [triggerStrong, triggerSoft]);
 
   useEffect(() => {
     let socketInstance: Socket | null = null;
@@ -122,7 +133,29 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
           role: (data.role === 'assistant' || data.role === 'user' || data.role === 'system') ? data.role : 'assistant',
           timestamp: new Date(data.timestamp),
           status: 'sent',
+          isCrisis: data.metadata?.is_crisis as boolean | undefined,
         });
+
+        // Trigger haptic
+        triggerSoftRef.current();
+      });
+
+      socketInstance.on(SOCKET_EVENTS.CRISIS_RESPONSE, (data: AiResponsePayload) => {
+        useChatStore.getState().clearTypingTimeouts();
+        useChatStore.getState().setTypingState('none');
+        
+        useChatStore.getState().addMessage({
+          id: data.id || `crisis_${Date.now()}`,
+          content: data.content,
+          role: 'assistant',
+          timestamp: new Date(data.timestamp),
+          status: 'sent',
+          isCrisis: true,
+        });
+
+        // Crisis always triggers strong feedback
+        useVibeStore.getState().setVibe('crisis');
+        triggerStrongRef.current();
       });
 
       socketInstance.on(SOCKET_EVENTS.STREAM_CHUNK, (data: StreamChunkPayload) => {
@@ -142,6 +175,11 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
       socketInstance.on(SOCKET_EVENTS.VIBE_UPDATE, (data: VibeUpdatePayload) => {
         useVibeStore.getState().setVibe(data.vibe);
+        
+        // Trigger haptics for strong vibes
+        if (data.vibe === 'positive' || data.vibe === 'stressed') {
+          triggerSoftRef.current();
+        }
       });
 
       socketInstance.on(SOCKET_EVENTS.ERROR, (err: SocketErrorPayload) => {
