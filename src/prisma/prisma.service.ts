@@ -35,6 +35,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         id, 
         content, 
         metadata, 
+        sensitivity_level as "sensitivityLevel",
         created_at as "createdAt",
         1 - (embedding <=> ${vectorString}::vector) as similarity
       FROM memories

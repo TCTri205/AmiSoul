@@ -231,15 +231,30 @@ export class ContextRetrieverService {
   }
 
   private filterByBonding(memories: StoredMemory[], bondingScore: number): StoredMemory[] {
-    // Bonding Filter (T3.2 Rule):
-    // Stranger (0-20): Only Semantic Nodes (metadata.type === 'semantic')
-    // Friend+ (21-100): Episodic Nodes (all)
-    
+    // Bonding Gate Thresholds (T3.6 Rules):
+    // L1 (Public/Casual): Bonding >= 0
+    // L2 (Friendly): Bonding >= 20
+    // L3 (Personal): Bonding >= 40
+    // L4 (Intimate): Bonding >= 60
+    // L5 (Private): Bonding >= 80
+
+    // Additional Layer (T3.2 Rule): 
+    // Stranger (0-20): Only Semantic Nodes AND L1
     if (bondingScore <= 20) {
-      return memories.filter(m => m.metadata?.type === 'semantic');
+      return memories.filter(m => 
+        m.metadata?.type === 'semantic' && 
+        (m.sensitivityLevel ?? 1) <= 1
+      );
     }
-    
-    return memories;
+
+    // Friend+ (21-100): Threshold-based filtering
+    let maxLevel = 1;
+    if (bondingScore >= 80) maxLevel = 5;
+    else if (bondingScore >= 60) maxLevel = 4;
+    else if (bondingScore >= 40) maxLevel = 3;
+    else if (bondingScore >= 20) maxLevel = 2;
+
+    return memories.filter(m => (m.sensitivityLevel ?? 1) <= maxLevel);
   }
 
   private estimateTokens(text: string): number {

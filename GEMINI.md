@@ -76,7 +76,7 @@ The project is divided into 9 Sprints. Current status:
 - **Completed Tickets:**
   - [T1.1 - T1.7: Sprint-01 Foundation](docs/project_managements/ticket/Sprint-01/README.md) — `✅ Completed`.
   - [T2.1 - T2.8: Sprint-02 Perception & Routing](docs/project_managements/ticket/Sprint-02/README.md) — `✅ Completed`.
-  - [T3.1 - T3.4: Sprint-03 Affective Memory](docs/project_managements/ticket/Sprint-03/README.md) — `🔵 In Progress (4/8)`.
+  - [T3.1 - T3.7: Sprint-03 Affective Memory](docs/project_managements/ticket/Sprint-03/README.md) — `🔵 In Progress (7/8)`.
 - **Next Goal:** [T3.8: Prisma Encryption Middleware](docs/project_managements/ticket/Sprint-03/T3.8_Prisma_Encryption_Middleware.md).
 
 ---

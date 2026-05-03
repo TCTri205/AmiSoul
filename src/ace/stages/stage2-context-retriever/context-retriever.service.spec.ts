@@ -74,6 +74,7 @@ describe('ContextRetrieverService', () => {
           id: 'mem-1',
           content: 'Old memory',
           similarity: 0.8,
+          sensitivityLevel: 1,
           createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
           metadata: { sentiment: 'positive', type: 'episodic' },
         },
@@ -81,6 +82,7 @@ describe('ContextRetrieverService', () => {
           id: 'mem-2',
           content: 'Fact memory',
           similarity: 0.9,
+          sensitivityLevel: 1,
           createdAt: new Date(Date.now() - 100 * 24 * 60 * 60 * 1000), // 100 days ago
           metadata: { sentiment: 'neutral', type: 'semantic' },
         }
@@ -214,7 +216,7 @@ describe('ContextRetrieverService', () => {
       expect(result.memories[0].retrievalScore).toBeGreaterThan(result.memories[1].retrievalScore);
     });
 
-    it('should filter memories for strangers (bonding <= 20)', async () => {
+    it('should filter memories for strangers (bonding <= 20) with L1 limit', async () => {
       orchestrator.embed.mockResolvedValue([0.1, 0.2]);
       
       const mockMemories = [
@@ -222,13 +224,23 @@ describe('ContextRetrieverService', () => {
           id: 'mem-1',
           content: 'Episodic story',
           similarity: 0.9,
+          sensitivityLevel: 1,
           createdAt: new Date(),
           metadata: { sentiment: 'positive', type: 'episodic' },
         },
         {
           id: 'mem-2',
-          content: 'Semantic fact',
+          content: 'Semantic fact L1',
           similarity: 0.8,
+          sensitivityLevel: 1,
+          createdAt: new Date(),
+          metadata: { sentiment: 'neutral', type: 'semantic' },
+        },
+        {
+          id: 'mem-3',
+          content: 'Semantic fact L2',
+          similarity: 0.8,
+          sensitivityLevel: 2,
           createdAt: new Date(),
           metadata: { sentiment: 'neutral', type: 'semantic' },
         }
@@ -241,7 +253,45 @@ describe('ContextRetrieverService', () => {
       const result = await service.retrieve(context);
 
       expect(result.memories).toHaveLength(1);
-      expect(result.memories[0].id).toBe('mem-2'); // Only semantic
+      expect(result.memories[0].id).toBe('mem-2'); // Only semantic AND L1
+    });
+
+    it('should respect sensitivity levels for friends (bonding 21-100)', async () => {
+      orchestrator.embed.mockResolvedValue([0.1]);
+      
+      const mockMemories = [
+        { id: 'L1', content: 'C', sensitivityLevel: 1, createdAt: new Date(), metadata: { type: 'episodic' } },
+        { id: 'L2', content: 'C', sensitivityLevel: 2, createdAt: new Date(), metadata: { type: 'episodic' } },
+        { id: 'L3', content: 'C', sensitivityLevel: 3, createdAt: new Date(), metadata: { type: 'episodic' } },
+        { id: 'L4', content: 'C', sensitivityLevel: 4, createdAt: new Date(), metadata: { type: 'episodic' } },
+        { id: 'L5', content: 'C', sensitivityLevel: 5, createdAt: new Date(), metadata: { type: 'episodic' } },
+      ];
+      
+      prisma.searchSimilarMemories.mockResolvedValue(mockMemories);
+      redis.get.mockResolvedValue(null);
+
+      // 1. Bonding 30 -> L2
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 30 });
+      const res1 = await service.retrieve(context);
+      expect(res1.memories.map(m => m.id)).toEqual(expect.arrayContaining(['L1', 'L2']));
+      expect(res1.memories.length).toBe(2);
+
+      // 2. Bonding 50 -> L3
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50 });
+      const res2 = await service.retrieve(context);
+      expect(res2.memories.map(m => m.id)).toEqual(expect.arrayContaining(['L1', 'L2', 'L3']));
+      expect(res2.memories.length).toBe(3);
+
+      // 3. Bonding 70 -> L4
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 70 });
+      const res3 = await service.retrieve(context);
+      expect(res3.memories.map(m => m.id)).toEqual(expect.arrayContaining(['L1', 'L2', 'L3', 'L4']));
+      expect(res3.memories.length).toBe(4);
+
+      // 4. Bonding 90 -> L5
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 90 });
+      const res4 = await service.retrieve(context);
+      expect(res4.memories).toHaveLength(5);
     });
 
     it('should handle failures gracefully and return minimal context', async () => {
@@ -252,6 +302,20 @@ describe('ContextRetrieverService', () => {
       expect(result.memories).toHaveLength(0);
       expect(result.calEvents).toHaveLength(0);
       expect(result.bondingScore).toBe(0);
+    });
+
+    it('should handle slow database responses gracefully', async () => {
+      orchestrator.embed.mockResolvedValue([0.1]);
+      
+      // Mock prisma to be slow
+      prisma.searchSimilarMemories.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve([]), 100)));
+      (prisma.user.findUnique as any).mockResolvedValue({ bondingScore: 50 });
+      redis.get.mockResolvedValue(null);
+
+      // We don't have a timeout in Stage 2 itself yet, but it should wait and succeed if not aborted
+      const result = await service.retrieve(context);
+      expect(result).toBeDefined();
+      expect(result.memories).toHaveLength(0);
     });
   });
 });

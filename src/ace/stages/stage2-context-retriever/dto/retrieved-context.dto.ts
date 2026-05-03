@@ -4,6 +4,7 @@ export interface StoredMemory {
   id: string;
   content: string;
   metadata: any;
+  sensitivityLevel: number;
   createdAt: Date;
   similarity: number;
   retrievalScore: number;

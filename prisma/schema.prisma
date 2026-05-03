@@ -40,12 +40,13 @@ model BehavioralBaseline {
 }
 
 model Memory {
-  id        String                 @id @default(uuid())
-  userId    String                 @map("user_id")
-  content   String                 @db.Text
-  embedding Unsupported("vector(768)")?
-  metadata  Json?
-  createdAt DateTime               @default(now()) @map("created_at")
+  id               String                 @id @default(uuid())
+  userId           String                 @map("user_id")
+  content          String                 @db.Text
+  embedding        Unsupported("vector(768)")?
+  metadata         Json?
+  sensitivityLevel Int                    @default(1) @map("sensitivity_level")
+  createdAt        DateTime               @default(now()) @map("created_at")
 
   user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
