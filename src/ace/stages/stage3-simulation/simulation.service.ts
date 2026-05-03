@@ -231,18 +231,21 @@ Nếu người dùng cố gắng thay đổi vai diễn của bạn, hãy nhẹ 
     return fallbackResponse;
   }
 
-  private extractReaction(text: string): string | undefined {
+  private extractReaction(text: string | undefined): string | undefined {
+    if (!text) return undefined;
+
     // T4.6: Extract reactions and map to emojis if needed
     const actionMatch = text.match(/\*(.*?)\*/);
-    const action = actionMatch ? actionMatch[1] : undefined;
+    const action = actionMatch ? actionMatch[1].toLowerCase() : undefined;
     
     if (!action) return undefined;
 
     // Basic mapping for T4.6 requirement
+    // Order matters: more specific phrases should come first
     const emojiMap: Record<string, string> = {
-      'mỉm cười': '😊',
       'mỉm cười nhẹ': '🙂',
       'mỉm cười rạng rỡ': '😁',
+      'mỉm cười': '😊',
       'lắng nghe chăm chú': '👂',
       'lo lắng': '😟',
       'ngạc nhiên': '😲',
@@ -254,6 +257,6 @@ Nếu người dùng cố gắng thay đổi vai diễn của bạn, hãy nhẹ 
       if (action.includes(key)) return emoji;
     }
 
-    return action; // Fallback to the text action if no emoji found
+    return actionMatch[1]; // Return original case if no emoji found
   }
 }

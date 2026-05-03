@@ -172,8 +172,20 @@ describe('SimulationService', () => {
       expect(reaction).toBe('vẫy tay chào');
     });
 
-    it('should map specific actions to emojis', () => {
-      const text = 'Mình rất vui! *mỉm cười rạng rỡ*';
+    it('should map specific actions to emojis (case-insensitive)', () => {
+       const text = 'Mình rất vui! *Mỉm cười rạng rỡ*';
+       const reaction = (service as any).extractReaction(text);
+       expect(reaction).toBe('😁');
+     });
+
+    it('should prefer specific matches over general ones', () => {
+      const text = 'Ami đang *mỉm cười nhẹ* nè.';
+      const reaction = (service as any).extractReaction(text);
+      expect(reaction).toBe('🙂');
+    });
+
+    it('should map general actions to emojis', () => {
+      const text = 'Hihi *mỉm cười*';
       const reaction = (service as any).extractReaction(text);
       expect(reaction).toBe('😊');
     });
