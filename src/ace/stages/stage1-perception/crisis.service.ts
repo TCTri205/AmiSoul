@@ -6,7 +6,7 @@ export class CrisisService {
 
   // Crisis Keywords (Vietnamese)
   private readonly CRISIS_PATTERNS = [
-    /tự (tử|sát|vẫn|kết liễu|hành hạ|làm hại)/i,
+    /tự (tử|sát|vẫn|kết liễu|hành hạ|làm hại|làm đau)/i,
     /muốn chết/i,
     /chết đi cho xong/i,
     /không muốn sống/i,
@@ -24,6 +24,7 @@ export class CrisisService {
     /vô vọng/i,
     /không còn lối thoát/i,
     /muốn biến mất/i,
+    /tạm biệt thế giới/i,
   ];
 
   /**

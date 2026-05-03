@@ -55,7 +55,8 @@ Every interaction in AmiSoul passes through a 6-stage processing flow:
 
 - **Backend:** NestJS (Node.js) + TypeScript.
 - **AI Models:** 
-  - **Gemini 2.5 Flash:** Primary processing (Reasoning, Simulation, Perception).
+  - **Groq (Llama-3/Mixtral):** High-speed processing (Priority 1 for Perception/Simulation).
+  - **Gemini 2.5 Flash:** Primary processing & fallback (Reasoning, Simulation, Perception).
   - **Text Embeddings:** Gemini Embedding API.
 - **Database:** 
   - **PostgreSQL:** Persistent data storage.
@@ -71,13 +72,11 @@ Every interaction in AmiSoul passes through a 6-stage processing flow:
 ## 📅 5. Roadmap & Status
 
 The project is divided into 9 Sprints. Current status:
-- **Status:** **Sprint-02 (Perception & Intelligent Routing)** — `🔵 In Progress`.
+- **Status:** **Sprint-03 (Affective Memory & Security)** — `🔵 In Progress`.
 - **Completed Tickets:**
   - [T1.1 - T1.7: Sprint-01 Foundation](docs/project_managements/ticket/Sprint-01/README.md) — `✅ Completed`.
-  - [T2.1: Perception Service Gemini SDK](docs/project_managements/ticket/Sprint-02/T2.1_Perception_Service_Gemini.md) — `✅ Completed`.
-  - [T2.2: Router Prompt Design](docs/project_managements/ticket/Sprint-02/T2.2_Router_Prompt_Design.md) — `✅ Completed`.
-  - [T2.3: Identity Service Style](docs/project_managements/ticket/Sprint-02/T2.3_Identity_Service_Style.md) — `✅ Completed`.
-- **Next Goal:** [T2.4: Crisis Heuristic Filter](docs/project_managements/ticket/Sprint-02/T2.4_Crisis_Heuristic_Filter.md).
+  - [T2.1 - T2.8: Sprint-02 Perception & Routing](docs/project_managements/ticket/Sprint-02/README.md) — `🔵 In Progress` (T2.8 adding multi-model support).
+- **Next Goal:** [T3.1: Prisma Vector Query](docs/project_managements/ticket/Sprint-03/T3.1_Prisma_Vector_Query.md).
 
 ---
 
