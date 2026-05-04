@@ -16,6 +16,9 @@ import { MessageSentDto, SessionType } from './dto/message.dto';
 
 import { Stage0AggregatorService } from '../ace/stages/stage0-aggregator/stage0-aggregator.service';
 import { AggregatedMessageBlockDto } from '../ace/stages/stage0-aggregator/dto/aggregated-message-block.dto';
+import { MediaProcessingService } from '../ace/stages/stage0-media/media-processing.service';
+import { MediaProcessingResultDto } from '../ace/stages/stage0-media/dtos/media-processing-result.dto';
+import { MediaErrorDto } from '../ace/stages/stage0-media/dtos/media-error.dto';
 
 @WebSocketGateway({
   cors: {
@@ -31,6 +34,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   constructor(
     private readonly authService: AuthService,
     private readonly aggregatorService: Stage0AggregatorService,
+    private readonly mediaProcessingService: MediaProcessingService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -229,6 +233,75 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     this.logger.log(`Reaction received from user ${user.id} for message ${data.messageId}: ${data.emoji}`);
     // Update vibe/bonding (T4.6)
     this.eventEmitter.emit('vibe.reaction', { userId: user.id, ...data });
+  }
+
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('user_audio')
+  async handleAudio(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+    const { user } = client as any;
+    const sessionType = (client as any).sessionType || SessionType.PERSISTENT;
+    this.logger.log(`Audio received from user ${user.id}`);
+    
+    if (!data.audio) {
+      this.server.to(`user:${user.id}`).emit('media_error', { code: 'INVALID_DATA', error: 'No audio data provided' });
+      return;
+    }
+
+    const base64Length = data.audio.length - (data.audio.indexOf(',') + 1);
+    const sizeInBytes = Math.ceil((base64Length * 3) / 4);
+    if (sizeInBytes > 26214400) {
+      this.server.to(`user:${user.id}`).emit('media_error', { code: 'FILE_TOO_LARGE', error: 'File exceeds 25MB limit' });
+      return;
+    }
+
+    this.mediaProcessingService.processAudio({
+      userId: user.id,
+      clientId: client.id,
+      sessionType: sessionType,
+      data: data.audio.split(',')[1] || data.audio,
+      mimeType: data.mimeType || 'audio/webm',
+    });
+  }
+
+  @UsePipes(new ValidationPipe())
+  @SubscribeMessage('user_image')
+  async handleImage(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+    const { user } = client as any;
+    const sessionType = (client as any).sessionType || SessionType.PERSISTENT;
+    this.logger.log(`Image received from user ${user.id}`);
+    
+    if (!data.image) {
+      this.server.to(`user:${user.id}`).emit('media_error', { code: 'INVALID_DATA', error: 'No image data provided' });
+      return;
+    }
+
+    this.mediaProcessingService.processImage({
+      userId: user.id,
+      clientId: client.id,
+      sessionType: sessionType,
+      data: data.image.split(',')[1] || data.image,
+      mimeType: data.mimeType || 'image/jpeg',
+    });
+  }
+
+  @OnEvent('media.processed')
+  async handleMediaProcessed(result: MediaProcessingResultDto) {
+    const messageData = {
+      content: result.processedText,
+      metadata: result.metadata,
+    };
+    
+    await this.aggregatorService.aggregateMessage(
+      result.userId, 
+      result.clientId, 
+      messageData as any, 
+      (result.sessionType as SessionType) || SessionType.PERSISTENT
+    );
+  }
+
+  @OnEvent('media.error')
+  handleMediaError(error: MediaErrorDto) {
+    this.server.to(`user:${error.userId}`).emit('media_error', error);
   }
 
   private extractToken(client: Socket): string | null {

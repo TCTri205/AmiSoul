@@ -46,9 +46,10 @@ export class GeminiProvider implements ILlmProvider {
     for (let i = 0; i < attempts; i++) {
       const apiKey = this.apiKeys[this.currentKeyIndex];
       try {
+        const modelName = request.model || 'gemini-1.5-flash';
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-          model: 'gemini-2.5-flash',
+          model: modelName,
           systemInstruction: request.systemPrompt,
           generationConfig: {
             responseMimeType: request.responseFormat === 'json' ? 'application/json' : 'text/plain',
@@ -57,14 +58,24 @@ export class GeminiProvider implements ILlmProvider {
           },
         });
 
-        const result = await model.generateContent(request.userPrompt, { signal: request.signal });
+        const parts: any[] = [{ text: request.userPrompt }];
+        if (request.mediaData) {
+          parts.push({
+            inlineData: {
+              data: request.mediaData.data,
+              mimeType: request.mediaData.mimeType,
+            },
+          });
+        }
+
+        const result = await model.generateContent(parts, { signal: request.signal });
         const response = await result.response;
         const text = response.text();
 
         return {
           text,
           provider: this.name,
-          model: 'gemini-2.5-flash',
+          model: modelName,
           usage: {
             promptTokens: response.usageMetadata?.promptTokenCount || 0,
             completionTokens: response.usageMetadata?.candidatesTokenCount || 0,

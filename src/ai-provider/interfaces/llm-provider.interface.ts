@@ -1,12 +1,17 @@
 import { Observable } from 'rxjs';
 
 export interface LlmRequest {
+  model?: string;
   systemPrompt?: string;
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
   responseFormat?: 'json' | 'text';
   signal?: AbortSignal;
+  mediaData?: {
+    data: string;
+    mimeType: string;
+  };
 }
 
 export interface LlmResponse {
