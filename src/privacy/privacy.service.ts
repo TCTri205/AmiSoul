@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 
@@ -9,6 +10,7 @@ export class PrivacyService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -16,9 +18,17 @@ export class PrivacyService {
    * Data remains in DB but is hidden from retrieval.
    */
   async softDeleteUserData(userId: string): Promise<void> {
-    this.logger.log(`Soft deleting data for user ${userId}`);
+    const configValue = this.configService.get('SOFT_DELETE_ENABLED');
+    const isSoftDeleteEnabled = configValue === true || configValue === 'true' || configValue === undefined;
 
-    await this.prisma.$transaction([
+    if (!isSoftDeleteEnabled) {
+      this.logger.warn(`Soft delete requested but SOFT_DELETE_ENABLED is false for user ${userId}. Falling back to hard delete.`);
+      return this.hardDeleteUserData(userId);
+    }
+
+    this.logger.log(`AUDIT: Soft deleting data for user ${userId}`);
+
+    const [memories, sessions] = await this.prisma.$transaction([
       this.prisma.memory.updateMany({
         where: { userId, isDeleted: false },
         data: { isDeleted: true },
@@ -32,7 +42,7 @@ export class PrivacyService {
     // Clear CAL context from Redis (Vector Sync requirement)
     await this.clearRedisCache(userId);
 
-    this.logger.log(`Soft delete completed for user ${userId}`);
+    this.logger.log(`AUDIT: Soft delete completed for user ${userId}. Affected: ${memories.count} memories, ${sessions.count} sessions.`);
   }
 
   /**
@@ -40,21 +50,31 @@ export class PrivacyService {
    * Data is permanently removed from DB.
    */
   async hardDeleteUserData(userId: string): Promise<void> {
-    this.logger.warn(`HARD DELETING data for user ${userId}`);
+    this.logger.warn(`AUDIT: HARD DELETING data for user ${userId}`);
 
-    await this.prisma.$transaction([
+    const [memories, sessions] = await this.prisma.$transaction([
       this.prisma.memory.deleteMany({
         where: { userId },
       }),
       this.prisma.session.deleteMany({
         where: { userId },
       }),
+      this.prisma.behavioralBaseline.deleteMany({
+        where: { userId },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          bondingScore: 0,
+          dpe: null,
+        },
+      }),
     ]);
 
     // Clear CAL context from Redis
     await this.clearRedisCache(userId);
 
-    this.logger.log(`Hard delete completed for user ${userId}`);
+    this.logger.log(`AUDIT: Hard delete completed for user ${userId}. Removed: ${memories.count} memories, ${sessions.count} sessions.`);
   }
 
   /**
@@ -67,6 +87,9 @@ export class PrivacyService {
       `cal:dates:${userId}`,
       `chat_history:${userId}`,
       `vibe:${userId}`,
+      `user:behavioral_signature:${userId}`,
+      `buffer:${userId}`,
+      `debounce:${userId}`,
     ];
 
     for (const key of keys) {
@@ -89,6 +112,7 @@ export class PrivacyService {
       }),
       this.prisma.memory.findMany({
         where: { userId, isDeleted: false },
+        orderBy: { createdAt: 'desc' },
       }),
       this.prisma.session.findMany({
         where: { userId, isDeleted: false },
@@ -102,5 +126,19 @@ export class PrivacyService {
       sessions,
       exportedAt: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Delete a single memory record.
+   */
+  async deleteMemory(userId: string, memoryId: string): Promise<void> {
+    this.logger.log(`AUDIT: Deleting single memory ${memoryId} for user ${userId}`);
+    
+    await this.prisma.memory.delete({
+      where: { id: memoryId, userId },
+    });
+    
+    // Clear Redis as memory change might affect CAL context
+    await this.clearRedisCache(userId);
   }
 }

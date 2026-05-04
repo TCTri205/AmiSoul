@@ -14,6 +14,7 @@ export interface Message {
   reactions?: Reaction[];
   replyToId?: string;
   isCrisis?: boolean;
+  isIncognito?: boolean;
   isInterrupted?: boolean;
   interruptedAt?: number; // Character index where the message was cut
 }

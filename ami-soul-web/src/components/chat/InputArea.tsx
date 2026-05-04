@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Mic, Plus, X, Square, Image as ImageIcon } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, Mic, Plus, X, Square } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
 import { useSocket } from '@/providers/SocketProvider';
 import { useVibeStore } from '@/store/useVibeStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/hooks/use-toast';
 import ReplyPreview from './ReplyPreview';
 import AudioWaveform from './AudioWaveform';
@@ -21,6 +22,7 @@ const InputArea = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   
   const { sendMessage, sendInterrupt, sendAudio, sendImage } = useSocket();
+  const { isIncognito } = useAuthStore();
   const { connectionStatus } = useVibeStore();
   const { isRecordingVoice, setRecording } = useUIStore();
   const { toast } = useToast();
@@ -63,18 +65,23 @@ const InputArea = () => {
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
           const base64Audio = reader.result as string;
+          const session_type = isIncognito ? 'incognito' : 'persistent';
+          const audioMsgId = `voice_${Date.now()}`;
+
           sendAudio({
             audioBase64: base64Audio,
             mimeType: 'audio/webm',
-            messageId: `voice_${Date.now()}`
-          });
+            messageId: audioMsgId,
+            session_type
+          } as any);
           
           addMessage({
-            id: `voice_${Date.now()}`,
+            id: audioMsgId,
             content: "🎤 [Tin nhắn thoại]",
             role: 'user',
             timestamp: new Date(),
-            status: 'sending'
+            status: 'sending',
+            isIncognito
           });
         };
 
@@ -161,6 +168,7 @@ const InputArea = () => {
 
     const messageContent = text.trim();
     const tempId = `msg_${Date.now()}`;
+    const session_type = isIncognito ? 'incognito' : 'persistent';
 
     // 1. Send text message if exists
     if (messageContent) {
@@ -170,11 +178,13 @@ const InputArea = () => {
         role: 'user',
         timestamp: new Date(),
         status: 'sending',
-        replyToId: replyToMessage?.id
+        replyToId: replyToMessage?.id,
+        isIncognito
       });
       sendMessage(messageContent, { 
         replyToId: replyToMessage?.id,
-        messageId: tempId
+        messageId: tempId,
+        session_type
       });
     }
 
@@ -188,14 +198,16 @@ const InputArea = () => {
         content: "🖼️ [Hình ảnh]",
         role: 'user',
         timestamp: new Date(),
-        status: 'sending'
+        status: 'sending',
+        isIncognito
       });
 
       sendImage({
         images: images,
         mimeTypes: images.map(img => img.split(';')[0].split(':')[1] || 'image/jpeg'),
-        messageId: imageMsgId
-      });
+        messageId: imageMsgId,
+        session_type
+      } as any);
     }
 
     setText('');

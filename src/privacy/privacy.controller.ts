@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Delete, UseGuards, Request, Param } from '@nestjs/common';
 import { PrivacyService } from './privacy.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -22,5 +22,11 @@ export class PrivacyController {
   @Get('export')
   async exportData(@Request() req: any) {
     return this.privacyService.exportUserData(req.user.id);
+  }
+
+  @Delete('memories/:id')
+  async deleteOneMemory(@Request() req: any, @Param('id') id: string) {
+    await this.privacyService.deleteMemory(req.user.id, id);
+    return { message: 'Memory deleted successfully' };
   }
 }

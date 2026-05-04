@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ShieldOff } from 'lucide-react';
 import { Message } from '@/types/message';
 import { useChatStore } from '@/store/useChatStore';
 import { useSocket } from '@/providers/SocketProvider';
@@ -142,6 +143,14 @@ const MessageBubble = ({
               )
         )}
       >
+        {message.isIncognito && (
+          <div className={cn(
+            "absolute top-1 opacity-20",
+            isUser ? "left-1" : "right-1"
+          )}>
+            <ShieldOff className="w-3 h-3" />
+          </div>
+        )}
         <div className="prose prose-sm dark:prose-invert max-w-none break-words">
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]}

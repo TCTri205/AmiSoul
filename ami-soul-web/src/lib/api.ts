@@ -27,6 +27,7 @@ async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
 export const privacyApi = {
   softDelete: () => fetchWithAuth('/privacy/memories/soft', { method: 'DELETE' }),
   hardDelete: () => fetchWithAuth('/privacy/memories/hard', { method: 'DELETE' }),
+  deleteMemory: (id: string) => fetchWithAuth(`/privacy/memories/${id}`, { method: 'DELETE' }),
   exportData: () => fetchWithAuth('/privacy/export', { method: 'GET' }),
 };
 

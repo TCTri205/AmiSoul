@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -21,7 +21,10 @@ import {
   ShieldOff, 
   User as UserIcon,
   Award,
-  Loader2
+  Loader2,
+  ChevronRight,
+  History,
+  X
 } from 'lucide-react';
 import { privacyApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
@@ -46,6 +49,27 @@ const SettingsDialog = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showMemoryList, setShowMemoryList] = useState(false);
+  const [memories, setMemories] = useState<any[]>([]);
+  const [isLoadingMemories, setIsLoadingMemories] = useState(false);
+
+  useEffect(() => {
+    if (isSettingsOpen && showMemoryList) {
+      fetchMemories();
+    }
+  }, [isSettingsOpen, showMemoryList]);
+
+  const fetchMemories = async () => {
+    setIsLoadingMemories(true);
+    try {
+      const data = await privacyApi.exportData();
+      setMemories(data.memories || []);
+    } catch (error) {
+      console.error('Failed to fetch memories', error);
+    } finally {
+      setIsLoadingMemories(false);
+    }
+  };
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -90,6 +114,7 @@ const SettingsDialog = () => {
         description: hard ? "Toàn bộ ký ức đã bị xóa vĩnh viễn." : "Ký ức của bạn đã được ẩn đi.",
       });
       setShowConfirmDelete(false);
+      if (showMemoryList) fetchMemories();
     } catch (error: any) {
       toast({
         title: "Lỗi",
@@ -98,6 +123,22 @@ const SettingsDialog = () => {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteSingleMemory = async (id: string) => {
+    try {
+      await privacyApi.deleteMemory(id);
+      setMemories(prev => prev.filter(m => m.id !== id));
+      toast({
+        description: "Đã xóa ký ức chọn lọc.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: "Không thể xóa ký ức này.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -121,7 +162,7 @@ const SettingsDialog = () => {
 
   return (
     <Dialog open={isSettingsOpen} onOpenChange={toggleSettings}>
-      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-zinc-900/98 backdrop-blur-3xl border-white/20 dark:border-white/10 p-0 gap-0 shadow-2xl rounded-3xl">
+      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-zinc-900/98 backdrop-blur-3xl border-white/20 dark:border-white/10 p-0 gap-0 shadow-2xl rounded-3xl scrollbar-none">
         <div className="p-6 pb-2">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight">Cài đặt & Riêng tư</DialogTitle>
@@ -224,7 +265,7 @@ const SettingsDialog = () => {
                   </div>
                   <div>
                     <p className="text-sm font-semibold">Chế độ ẩn danh</p>
-                    <p className="text-[11px] text-muted-foreground/70">Không lưu lại lịch sử trò chuyện mới</p>
+                    <p className="text-[11px] text-muted-foreground/70">Ami sẽ không ghi nhớ các cuộc trò chuyện mới</p>
                   </div>
                 </div>
                 <Switch 
@@ -238,29 +279,78 @@ const SettingsDialog = () => {
           {/* Data Management Section */}
           <section className="space-y-4">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Quản lý dữ liệu</h3>
-            <div className="grid grid-cols-2 gap-3 px-1">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="rounded-2xl h-11 border-foreground/5 bg-foreground/[0.02] dark:bg-white/[0.02] hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] transition-all font-medium"
-                onClick={handleExport}
-                disabled={isExporting}
+            <div className="space-y-3 px-1">
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="rounded-2xl h-11 border-foreground/5 bg-foreground/[0.02] dark:bg-white/[0.02] hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] transition-all font-medium"
+                  onClick={handleExport}
+                  disabled={isExporting}
+                >
+                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2 text-muted-foreground" />}
+                  Xuất dữ liệu
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="rounded-2xl h-11 border-red-500/10 bg-red-500/[0.02] text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all font-medium"
+                  onClick={() => setShowConfirmDelete(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Xóa ký ức
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between h-10 px-4 rounded-xl hover:bg-foreground/[0.03] text-muted-foreground/80 font-medium"
+                onClick={() => setShowMemoryList(!showMemoryList)}
               >
-                {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2 text-muted-foreground" />}
-                Xuất dữ liệu
+                <div className="flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  <span className="text-xs">Quản lý ký ức chọn lọc</span>
+                </div>
+                <ChevronRight className={cn("w-4 h-4 transition-transform", showMemoryList && "rotate-90")} />
               </Button>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="rounded-2xl h-11 border-red-500/10 bg-red-500/[0.02] text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all font-medium"
-                onClick={() => setShowConfirmDelete(true)}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Xóa ký ức
-              </Button>
+
+              {showMemoryList && (
+                <div className="space-y-3 mt-2 animate-in slide-in-from-top-2 duration-300">
+                  {isLoadingMemories ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/30" />
+                    </div>
+                  ) : memories.length > 0 ? (
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-foreground/5">
+                      {memories.map((m) => (
+                        <div key={m.id} className="flex items-start justify-between gap-3 p-3 bg-foreground/[0.02] dark:bg-white/[0.02] rounded-xl border border-foreground/[0.05] dark:border-white/[0.05] group">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] line-clamp-2 leading-relaxed text-foreground/80">{m.content}</p>
+                            <p className="text-[9px] text-muted-foreground/50 mt-1 font-mono">
+                              {new Date(m.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteSingleMemory(m.id)}
+                            className="p-1.5 text-red-500/40 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-center text-muted-foreground/40 py-4 italic">
+                      Chưa có ký ức nào được lưu lại.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-            <p className="text-[10px] text-center text-muted-foreground/50 italic">
+            
+            <p className="text-[10px] text-center text-muted-foreground/50 italic pt-2">
               Tuân thủ tiêu chuẩn bảo mật dữ liệu AmiSoul.
             </p>
           </section>
@@ -285,7 +375,7 @@ const SettingsDialog = () => {
           <div className="flex flex-col gap-3 py-4">
              <Button 
                variant="outline" 
-               className="justify-start h-14 px-4 rounded-xl"
+               className="justify-start h-14 px-4 rounded-xl border-foreground/5 bg-foreground/[0.01] hover:bg-foreground/[0.03]"
                onClick={() => handleDeleteMemories(false)}
                disabled={isDeleting}
              >
@@ -297,7 +387,7 @@ const SettingsDialog = () => {
 
              <Button 
                variant="destructive" 
-               className="justify-start h-14 px-4 rounded-xl"
+               className="justify-start h-14 px-4 rounded-xl shadow-lg shadow-red-500/10"
                onClick={() => handleDeleteMemories(true)}
                disabled={isDeleting}
              >
