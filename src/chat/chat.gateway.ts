@@ -13,6 +13,7 @@ import { Logger, UsePipes, ValidationPipe } from '@nestjs/common';
 import { OnEvent, EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService } from '../auth/auth.service';
 import { MessageSentDto, SessionType } from './dto/message.dto';
+import { UserAudioDto, UserImageDto } from './dto/media.dto';
 
 import { Stage0AggregatorService } from '../ace/stages/stage0-aggregator/stage0-aggregator.service';
 import { AggregatedMessageBlockDto } from '../ace/stages/stage0-aggregator/dto/aggregated-message-block.dto';
@@ -58,9 +59,10 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
           }
         } else if (deviceId) {
           // Guest user via Device ID
+          const guest = await this.authService.findOrCreateGuest(deviceId as string);
           (socket as any).user = {
-            id: deviceId,
-            username: `Guest_${(deviceId as string).slice(0, 8)}`,
+            id: guest.id,
+            username: guest.username,
             isGuest: true,
           };
         } else {
@@ -211,6 +213,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     });
   }
 
+  @OnEvent('batch_mode.start')
+  handleBatchModeStart(payload: { userId: string; message: string }) {
+    this.server.to(`user:${payload.userId}`).emit('batch_mode_start', {
+      message: payload.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   @OnEvent('vibe.update')
   handleVibeUpdate(payload: { userId: string; vibe: string }) {
     this.server.to(`user:${payload.userId}`).emit('vibe_update', {
@@ -237,19 +247,19 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('user_audio')
-  async handleAudio(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+  async handleAudio(@ConnectedSocket() client: Socket, @MessageBody() data: UserAudioDto) {
     const { user } = client as any;
     const sessionType = (client as any).sessionType || SessionType.PERSISTENT;
     this.logger.log(`Audio received from user ${user.id}`);
     
-    if (!data.audio) {
+    if (!data.audioBase64) {
       this.server.to(`user:${user.id}`).emit('media_error', { code: 'INVALID_DATA', error: 'No audio data provided' });
       return;
     }
 
-    const base64Length = data.audio.length - (data.audio.indexOf(',') + 1);
+    const base64Length = data.audioBase64.length - (data.audioBase64.indexOf(',') + 1);
     const sizeInBytes = Math.ceil((base64Length * 3) / 4);
-    if (sizeInBytes > 26214400) {
+    if (sizeInBytes > 26214400) { // 25MB
       this.server.to(`user:${user.id}`).emit('media_error', { code: 'FILE_TOO_LARGE', error: 'File exceeds 25MB limit' });
       return;
     }
@@ -258,29 +268,43 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       userId: user.id,
       clientId: client.id,
       sessionType: sessionType,
-      data: data.audio.split(',')[1] || data.audio,
+      data: data.audioBase64.split(',')[1] || data.audioBase64,
       mimeType: data.mimeType || 'audio/webm',
     });
   }
 
   @UsePipes(new ValidationPipe())
   @SubscribeMessage('user_image')
-  async handleImage(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+  async handleImage(@ConnectedSocket() client: Socket, @MessageBody() data: UserImageDto) {
     const { user } = client as any;
     const sessionType = (client as any).sessionType || SessionType.PERSISTENT;
-    this.logger.log(`Image received from user ${user.id}`);
+    this.logger.log(`Images received from user ${user.id} (${data.images.length} files)`);
     
-    if (!data.image) {
+    if (!data.images || data.images.length === 0) {
       this.server.to(`user:${user.id}`).emit('media_error', { code: 'INVALID_DATA', error: 'No image data provided' });
       return;
     }
 
-    this.mediaProcessingService.processImage({
-      userId: user.id,
-      clientId: client.id,
-      sessionType: sessionType,
-      data: data.image.split(',')[1] || data.image,
-      mimeType: data.mimeType || 'image/jpeg',
+    // Process each image
+    data.images.forEach((img, index) => {
+      const base64Length = img.length - (img.indexOf(',') + 1);
+      const sizeInBytes = Math.ceil((base64Length * 3) / 4);
+      
+      if (sizeInBytes > 20971520) { // 20MB limit
+        this.server.to(`user:${user.id}`).emit('media_error', { 
+          code: 'FILE_TOO_LARGE', 
+          error: `Image ${index + 1} exceeds 20MB limit` 
+        });
+        return;
+      }
+
+      this.mediaProcessingService.processImage({
+        userId: user.id,
+        clientId: client.id,
+        sessionType: sessionType,
+        data: img.split(',')[1] || img,
+        mimeType: (data.mimeTypes && data.mimeTypes[index]) || 'image/jpeg',
+      });
     });
   }
 
@@ -290,6 +314,13 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       content: result.processedText,
       metadata: result.metadata,
     };
+
+    // Notify user that media was processed and is now being aggregated
+    this.server.to(`user:${result.userId}`).emit('message_ack', {
+      status: 'processed',
+      mediaType: result.mediaType,
+      timestamp: new Date().toISOString(),
+    });
     
     await this.aggregatorService.aggregateMessage(
       result.userId, 

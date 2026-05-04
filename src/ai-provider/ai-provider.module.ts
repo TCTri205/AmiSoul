@@ -7,6 +7,6 @@ import { LlmOrchestrator } from './llm-orchestrator.service';
 @Module({
   imports: [ConfigModule],
   providers: [GeminiProvider, GroqProvider, LlmOrchestrator],
-  exports: [LlmOrchestrator],
+  exports: [LlmOrchestrator, GeminiProvider, GroqProvider],
 })
 export class AiProviderModule {}

@@ -47,6 +47,7 @@ export class Stage0AggregatorService {
     // 1. Store message in Redis buffer
     const messageItem = JSON.stringify({
       content: data.content,
+      metadata: data.metadata,
       timestamp: new Date().toISOString(),
     });
     const currentQueueLength = await this.redisService.rpush(bufferKey, messageItem);
@@ -116,7 +117,7 @@ export class Stage0AggregatorService {
     const messagesRaw = await this.redisService.lrange(bufferKey, 0, -1);
     if (messagesRaw.length === 0) return;
 
-    const messages: { content: string; timestamp: string }[] = messagesRaw.map((m) =>
+    const messages: { content: string; timestamp: string; metadata?: any }[] = messagesRaw.map((m) =>
       JSON.parse(m),
     );
 
@@ -129,7 +130,10 @@ export class Stage0AggregatorService {
     this.activeControllers.set(userId, controller);
 
     // 4. Join content and check for Wall of Text
-    const fullContent = messages.map((m) => m.content).join('\n');
+    const fullContent = messages.map((m) => {
+      const origin = m.metadata?.origin === 'voice' ? '[User Spoke] ' : '';
+      return `${origin}${m.content}`;
+    }).join('\n');
     const estimatedTokens = fullContent.length / this.TOKEN_ESTIMATION_RATIO;
     const requiresSummarization = estimatedTokens > this.SUMMARIZATION_THRESHOLD_TOKENS;
 
@@ -175,6 +179,10 @@ export class Stage0AggregatorService {
         this.preemptCounts.set(userId, count + 1);
       } else {
         this.logger.warn(`Preemption limiter active for user: ${userId}. Switching to Batch Mode.`);
+        this.eventEmitter.emit('batch_mode.start', {
+          userId,
+          message: 'Ami đang đọc hết tin của bạn...',
+        });
       }
     } catch (error) {
       this.logger.error(`Failed to fetch vibe for preemption check: ${error.message}`);

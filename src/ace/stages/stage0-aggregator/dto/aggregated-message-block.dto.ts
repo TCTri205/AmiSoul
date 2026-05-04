@@ -8,6 +8,7 @@ export class AggregatedMessageBlockDto {
   messages: {
     content: string;
     timestamp: string;
+    metadata?: any;
   }[];
 
   sessionType: SessionType;
