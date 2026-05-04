@@ -1,6 +1,7 @@
 import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { OtpService } from '../otp/otp.service';
 import { AccountLinkingService } from '../account-linking/account-linking.service';
+import { AuthService } from './auth.service';
 import { SendOtpDto } from '../otp/dto/send-otp.dto';
 import { VerifyOtpDto } from '../otp/dto/verify-otp.dto';
 import { LinkAccountDto } from '../account-linking/dto/link-account.dto';
@@ -10,6 +11,7 @@ export class AuthController {
   constructor(
     private readonly otpService: OtpService,
     private readonly accountLinkingService: AccountLinkingService,
+    private readonly authService: AuthService,
   ) {}
 
   @Post('send-otp')
@@ -27,15 +29,19 @@ export class AuthController {
     if (!isValid) {
       throw new BadRequestException('Invalid or expired OTP');
     }
-    return { message: 'OTP verified successfully' };
+    
+    const emailAuthToken = await this.authService.generateEmailVerificationToken(verifyOtpDto.email);
+    return { 
+      message: 'OTP verified successfully',
+      emailAuthToken
+    };
   }
 
   @Post('link-account')
   async linkAccount(@Body() linkAccountDto: LinkAccountDto) {
     return this.accountLinkingService.linkGuestToAccount(
       linkAccountDto.deviceId,
-      linkAccountDto.email,
-      linkAccountDto.code,
+      linkAccountDto.emailAuthToken,
     );
   }
 }

@@ -1,6 +1,5 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { OtpService } from '../otp/otp.service';
 import { AuthService } from '../auth/auth.service';
 
 @Injectable()
@@ -9,15 +8,14 @@ export class AccountLinkingService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly otpService: OtpService,
     private readonly authService: AuthService,
   ) {}
 
-  async linkGuestToAccount(deviceId: string, email: string, code: string) {
-    // 1. Verify OTP
-    const isOtpValid = await this.otpService.verifyOtp(email, code);
-    if (!isOtpValid) {
-      throw new BadRequestException('Invalid or expired OTP');
+  async linkGuestToAccount(deviceId: string, emailAuthToken: string) {
+    // 1. Verify Email Auth Token
+    const email = await this.authService.verifyEmailVerificationToken(emailAuthToken);
+    if (!email) {
+      throw new BadRequestException('Invalid or expired email authentication token');
     }
 
     // 2. Find Guest User
@@ -53,11 +51,28 @@ export class AccountLinkingService {
             data: { userId: existingUser.id },
           });
 
-          // Add bonding score (taking the max)
+          // Handle Behavioral Baseline
+          const guestBaseline = await tx.behavioralBaseline.findUnique({
+            where: { userId: guestUser.id },
+          });
+          const existingBaseline = await tx.behavioralBaseline.findUnique({
+            where: { userId: existingUser.id },
+          });
+
+          if (guestBaseline && !existingBaseline) {
+            await tx.behavioralBaseline.update({
+              where: { id: guestBaseline.id },
+              data: { userId: existingUser.id },
+            });
+          }
+
+          // Update existing user: Max bonding score and take DPE if existing is null
           await tx.user.update({
             where: { id: existingUser.id },
             data: {
               bondingScore: Math.max(existingUser.bondingScore, guestUser.bondingScore),
+              dpe: existingUser.dpe || guestUser.dpe,
+              username: existingUser.username || guestUser.username,
             },
           });
 

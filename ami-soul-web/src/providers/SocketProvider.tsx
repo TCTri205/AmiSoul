@@ -47,8 +47,7 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [showAccountLink, setShowAccountLink] = useState(false);
-  const [accountLinkData, setAccountLinkData] = useState<AccountLinkSuggestionPayload | null>(null);
+  const { isAccountLinkOpen, accountLinkData, setAccountLink } = useUIStore();
   
   const { user, token, setToken, setUser } = useAuthStore();
   const { initializeCache, queueMessage, isOffline } = useLocalCache();
@@ -248,8 +247,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
       socketInstance.on(SOCKET_EVENTS.SUGGEST_ACCOUNT_LINK, (data: AccountLinkSuggestionPayload) => {
         console.log('[Socket] Account link suggested:', data);
-        setAccountLinkData(data);
-        setShowAccountLink(true);
+        setAccountLink(true, data);
       });
 
       socketInstance.on(SOCKET_EVENTS.BATCH_MODE_START, (data: BatchModeStartPayload) => {
@@ -326,8 +324,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     <SocketContext.Provider value={value}>
       {children}
       <AccountLinkSheet 
-        open={showAccountLink} 
-        onOpenChange={setShowAccountLink}
+        open={isAccountLinkOpen} 
+        onOpenChange={(open) => setAccountLink(open, accountLinkData)}
         bondingScore={accountLinkData?.bonding_score}
         suggestionMessage={accountLinkData?.message}
       />

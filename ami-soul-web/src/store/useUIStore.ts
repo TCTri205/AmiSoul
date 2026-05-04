@@ -7,6 +7,8 @@ interface UIStore {
   isSettingsOpen: boolean;
   isHapticsEnabled: boolean;
   isSoundEnabled: boolean;
+  isAccountLinkOpen: boolean;
+  accountLinkData: { bonding_score?: number; message?: string } | null;
   replyingToMessage: Message | null;
 
   // Actions
@@ -15,6 +17,7 @@ interface UIStore {
   toggleSettings: (isOpen?: boolean) => void;
   setHaptics: (enabled: boolean) => void;
   setSound: (enabled: boolean) => void;
+  setAccountLink: (isOpen: boolean, data?: { bonding_score?: number; message?: string } | null) => void;
   setReply: (message: Message | null) => void;
 }
 
@@ -24,6 +27,8 @@ export const useUIStore = create<UIStore>((set) => ({
   isSettingsOpen: false,
   isHapticsEnabled: true,
   isSoundEnabled: true,
+  isAccountLinkOpen: false,
+  accountLinkData: null,
   replyingToMessage: null,
 
   toggleModal: (isOpen) => 
@@ -36,6 +41,9 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setHaptics: (isHapticsEnabled) => set({ isHapticsEnabled }),
   setSound: (isSoundEnabled) => set({ isSoundEnabled }),
+  
+  setAccountLink: (isAccountLinkOpen, accountLinkData = null) => 
+    set({ isAccountLinkOpen, accountLinkData: accountLinkData ?? null }),
   
   setReply: (replyingToMessage) => set({ replyingToMessage }),
 }));

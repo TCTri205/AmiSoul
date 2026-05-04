@@ -1,14 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AccountLinkingService } from './account-linking.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { OtpService } from '../otp/otp.service';
 import { AuthService } from '../auth/auth.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 describe('AccountLinkingService', () => {
   let service: AccountLinkingService;
   let prisma: PrismaService;
-  let otpService: OtpService;
   let authService: AuthService;
 
   const mockPrismaService = {
@@ -23,15 +21,16 @@ describe('AccountLinkingService', () => {
     session: {
       updateMany: jest.fn(),
     },
+    behavioralBaseline: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
     $transaction: jest.fn((cb) => cb(mockPrismaService)),
-  };
-
-  const mockOtpService = {
-    verifyOtp: jest.fn(),
   };
 
   const mockAuthService = {
     generateToken: jest.fn(),
+    verifyEmailVerificationToken: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -39,14 +38,12 @@ describe('AccountLinkingService', () => {
       providers: [
         AccountLinkingService,
         { provide: PrismaService, useValue: mockPrismaService },
-        { provide: OtpService, useValue: mockOtpService },
         { provide: AuthService, useValue: mockAuthService },
       ],
     }).compile();
 
     service = module.get<AccountLinkingService>(AccountLinkingService);
     prisma = module.get<PrismaService>(PrismaService);
-    otpService = module.get<OtpService>(OtpService);
     authService = module.get<AuthService>(AuthService);
   });
 
@@ -55,18 +52,18 @@ describe('AccountLinkingService', () => {
   });
 
   describe('linkGuestToAccount', () => {
-    it('should throw BadRequestException if OTP is invalid', async () => {
-      mockOtpService.verifyOtp.mockResolvedValue(false);
+    it('should throw BadRequestException if token is invalid', async () => {
+      mockAuthService.verifyEmailVerificationToken.mockResolvedValue(null);
 
-      await expect(service.linkGuestToAccount('device123', 'test@example.com', '123456'))
+      await expect(service.linkGuestToAccount('device123', 'invalid-token'))
         .rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if guest user not found', async () => {
-      mockOtpService.verifyOtp.mockResolvedValue(true);
+      mockAuthService.verifyEmailVerificationToken.mockResolvedValue('test@example.com');
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.linkGuestToAccount('device123', 'test@example.com', '123456'))
+      await expect(service.linkGuestToAccount('device123', 'valid-token'))
         .rejects.toThrow(NotFoundException);
     });
 
@@ -74,15 +71,16 @@ describe('AccountLinkingService', () => {
       const guestUser = { id: 'guest-id', deviceId: 'device123', isGuest: true, bondingScore: 10 };
       const email = 'test@example.com';
 
-      mockOtpService.verifyOtp.mockResolvedValue(true);
+      mockAuthService.verifyEmailVerificationToken.mockResolvedValue(email);
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(guestUser) // for deviceId
         .mockResolvedValueOnce(null); // for email
       
+      mockPrismaService.behavioralBaseline.findUnique.mockResolvedValue(null);
       mockPrismaService.user.update.mockResolvedValue({ ...guestUser, email, isGuest: false });
       mockAuthService.generateToken.mockResolvedValue('new-token');
 
-      const result = await service.linkGuestToAccount('device123', email, '123456');
+      const result = await service.linkGuestToAccount('device123', 'valid-token');
 
       expect(result.token).toBe('new-token');
       expect(mockPrismaService.user.update).toHaveBeenCalledWith(
@@ -97,14 +95,15 @@ describe('AccountLinkingService', () => {
       const guestUser = { id: 'guest-id', deviceId: 'device123', isGuest: true, bondingScore: 10 };
       const existingUser = { id: 'user-id', email: 'test@example.com', isGuest: false, bondingScore: 5 };
 
-      mockOtpService.verifyOtp.mockResolvedValue(true);
+      mockAuthService.verifyEmailVerificationToken.mockResolvedValue('test@example.com');
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(guestUser) // for deviceId
         .mockResolvedValueOnce(existingUser); // for email
 
+      mockPrismaService.behavioralBaseline.findUnique.mockResolvedValue(null);
       mockAuthService.generateToken.mockResolvedValue('merged-token');
 
-      const result = await service.linkGuestToAccount('device123', 'test@example.com', '123456');
+      const result = await service.linkGuestToAccount('device123', 'valid-token');
 
       expect(result.token).toBe('merged-token');
       expect(mockPrismaService.memory.updateMany).toHaveBeenCalledWith(

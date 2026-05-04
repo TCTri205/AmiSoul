@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { privacyApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
@@ -36,7 +35,8 @@ const SettingsDialog = () => {
     isHapticsEnabled, 
     setHaptics,
     isSoundEnabled,
-    setSound 
+    setSound,
+    setAccountLink
   } = useUIStore();
 
   const { user, isIncognito, setIncognito } = useAuthStore();
@@ -101,6 +101,16 @@ const SettingsDialog = () => {
     }
   };
 
+  const handleLinkAccount = () => {
+    toggleSettings(false); // Close settings first
+    setTimeout(() => {
+      setAccountLink(true, { 
+        bonding_score: bondingScore,
+        message: "Hãy liên kết tài khoản để lưu giữ những kỷ niệm quý giá cùng Ami nhé!" 
+      });
+    }, 300);
+  };
+
   const getBondingLevel = (score: number) => {
     if (score >= 80) return "Tri kỷ (L5)";
     if (score >= 60) return "Thân thiết (L4)";
@@ -111,55 +121,67 @@ const SettingsDialog = () => {
 
   return (
     <Dialog open={isSettingsOpen} onOpenChange={toggleSettings}>
-      <DialogContent className="sm:max-w-[450px] max-h-[85vh] overflow-y-auto bg-white/90 dark:bg-zinc-900/95 backdrop-blur-2xl border-white/20 dark:border-white/10 p-0 gap-0">
+      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto bg-white/95 dark:bg-zinc-900/98 backdrop-blur-3xl border-white/20 dark:border-white/10 p-0 gap-0 shadow-2xl rounded-3xl">
         <div className="p-6 pb-2">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Cài đặt & Riêng tư</DialogTitle>
-            <DialogDescription>
-              Quản lý trải nghiệm và dữ liệu cá nhân của bạn.
+            <DialogTitle className="text-xl font-bold tracking-tight">Cài đặt & Riêng tư</DialogTitle>
+            <DialogDescription className="text-muted-foreground/70">
+              Quản lý trải nghiệm và bảo mật dữ liệu của bạn.
             </DialogDescription>
           </DialogHeader>
         </div>
         
-        <div className="px-6 py-4 space-y-6">
+        <div className="px-6 py-4 space-y-7">
           {/* Profile Section */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Cá nhân</h3>
-            <div className="bg-foreground/[0.03] dark:bg-white/[0.03] rounded-2xl p-4 border border-foreground/5 dark:border-white/5 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                  <UserIcon className="w-5 h-5" />
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Tài khoản</h3>
+            <div className="bg-foreground/[0.02] dark:bg-white/[0.02] rounded-[24px] p-4 border border-foreground/[0.05] dark:border-white/[0.05] space-y-4 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-500/10">
+                  <UserIcon className="w-6 h-6" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{user?.email || (user?.isGuest ? "Chế độ Khách" : "Người dùng AmiSoul")}</p>
-                  <p className="text-[10px] text-muted-foreground truncate font-mono opacity-60">ID: {user?.id || '...'}</p>
+                  <p className="text-sm font-semibold truncate leading-none mb-1.5">{user?.email || (user?.isGuest ? "Người dùng Khách" : "Người dùng AmiSoul")}</p>
+                  <p className="text-[10px] text-muted-foreground/60 truncate font-mono tracking-tighter">ID: {user?.id || '...'}</p>
                 </div>
+                {user?.isGuest && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 px-3 text-[11px] font-bold rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20"
+                    onClick={handleLinkAccount}
+                  >
+                    Liên kết
+                  </Button>
+                )}
               </div>
               
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                  <Award className="w-5 h-5" />
+              <div className="h-[1px] bg-foreground/[0.05] dark:bg-white/[0.05] mx-2" />
+
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-500/10">
+                  <Award className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Mức độ thân thiết</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">{getBondingLevel(bondingScore)} ({bondingScore} pts)</p>
+                  <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-wider leading-none mb-1.5">Mức độ gắn kết</p>
+                  <p className="text-sm font-bold bg-gradient-to-r from-amber-600 to-orange-500 dark:from-amber-400 dark:to-orange-400 bg-clip-text text-transparent">{getBondingLevel(bondingScore)}</p>
                 </div>
               </div>
             </div>
           </section>
 
           {/* Experience Section */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Trải nghiệm</h3>
-            <div className="space-y-4">
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Cấu hình trải nghiệm</h3>
+            <div className="space-y-5 px-1">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100/50 dark:border-blue-900/30">
                     <Smartphone className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Xúc giác</p>
-                    <p className="text-[11px] text-muted-foreground">Rung nhẹ khi Ami trả lời</p>
+                    <p className="text-sm font-semibold">Phản hồi xúc giác</p>
+                    <p className="text-[11px] text-muted-foreground/70">Rung nhẹ khi Ami phản hồi</p>
                   </div>
                 </div>
                 <Switch 
@@ -169,13 +191,13 @@ const SettingsDialog = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100/50 dark:border-purple-900/30">
                     <Volume2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Âm thanh</p>
-                    <p className="text-[11px] text-muted-foreground">Tiếng báo khi có tin nhắn</p>
+                    <p className="text-sm font-semibold">Âm thanh hệ thống</p>
+                    <p className="text-[11px] text-muted-foreground/70">Hiệu ứng âm thanh khi nhắn tin</p>
                   </div>
                 </div>
                 <Switch 
@@ -186,23 +208,23 @@ const SettingsDialog = () => {
             </div>
           </section>
 
-          <Separator className="opacity-50" />
-
           {/* Privacy Section */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Quyền riêng tư</h3>
-            <div className="space-y-4">
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Quyền riêng tư</h3>
+            <div className="space-y-5 px-1">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div className={cn(
-                    "p-2 rounded-lg transition-colors",
-                    isIncognito ? "bg-zinc-200 dark:bg-zinc-800" : "bg-green-100 dark:bg-green-900/30"
+                    "p-2.5 rounded-xl border transition-all duration-300",
+                    isIncognito 
+                      ? "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700" 
+                      : "bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30"
                   )}>
                     {isIncognito ? <ShieldOff className="w-4 h-4 text-zinc-600 dark:text-zinc-400" /> : <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />}
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Chế độ ẩn danh</p>
-                    <p className="text-[11px] text-muted-foreground">Không lưu lại ký ức mới</p>
+                    <p className="text-sm font-semibold">Chế độ ẩn danh</p>
+                    <p className="text-[11px] text-muted-foreground/70">Không lưu lại lịch sử trò chuyện mới</p>
                   </div>
                 </div>
                 <Switch 
@@ -210,36 +232,43 @@ const SettingsDialog = () => {
                   onCheckedChange={setIncognito} 
                 />
               </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="rounded-xl h-10 border-foreground/10"
-                  onClick={handleExport}
-                  disabled={isExporting}
-                >
-                  {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2" />}
-                  Xuất dữ liệu
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="rounded-xl h-10 border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/5"
-                  onClick={() => setShowConfirmDelete(true)}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Xóa ký ức
-                </Button>
-              </div>
             </div>
+          </section>
+
+          {/* Data Management Section */}
+          <section className="space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Quản lý dữ liệu</h3>
+            <div className="grid grid-cols-2 gap-3 px-1">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-2xl h-11 border-foreground/5 bg-foreground/[0.02] dark:bg-white/[0.02] hover:bg-foreground/[0.05] dark:hover:bg-white/[0.05] transition-all font-medium"
+                onClick={handleExport}
+                disabled={isExporting}
+              >
+                {isExporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Download className="w-4 h-4 mr-2 text-muted-foreground" />}
+                Xuất dữ liệu
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="rounded-2xl h-11 border-red-500/10 bg-red-500/[0.02] text-red-600 dark:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-all font-medium"
+                onClick={() => setShowConfirmDelete(true)}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Xóa ký ức
+              </Button>
+            </div>
+            <p className="text-[10px] text-center text-muted-foreground/50 italic">
+              Tuân thủ tiêu chuẩn bảo mật dữ liệu AmiSoul.
+            </p>
           </section>
         </div>
 
-        <div className="p-6 pt-2 pb-8 text-center">
-          <p className="text-[10px] text-muted-foreground opacity-50">
-            AmiSoul v0.1.0 • Được thiết kế để thấu hiểu.
+        <div className="p-8 text-center bg-foreground/[0.02] dark:bg-white/[0.01] mt-4">
+          <p className="text-[10px] text-muted-foreground/40 font-medium tracking-widest uppercase">
+            AmiSoul Engine v0.1.0 • Safe Harbor Protocol
           </p>
         </div>
       </DialogContent>
