@@ -9,6 +9,8 @@ interface ChatState {
   typingState: TypingState;
   streamingChunks: Record<string, string>;
   replyToMessage: Message | null;
+  consecutiveInterrupts: number;
+  batchModeActive: boolean;
   
   // Timeout tracking
   lastChunkTimestamp: number | null;
@@ -219,10 +221,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
       typingState: 'none',
       streamingChunks: {},
       lastChunkTimestamp: null,
-    });
-  },
-}));
-Timestamp: null,
     });
   },
 }));

@@ -15,6 +15,8 @@ model User {
   id           String    @id @default(uuid())
   username     String?   @unique
   email        String?   @unique
+  deviceId     String?   @unique @map("device_id")
+  isGuest      Boolean   @default(false) @map("is_guest")
   bondingScore Float     @default(0.0) @map("bonding_score")
   accounts     Account[]
   sessions     Session[]
@@ -25,6 +27,18 @@ model User {
   behavioralBaseline BehavioralBaseline?
 
   @@map("users")
+}
+
+model OtpVerification {
+  id        String   @id @default(uuid())
+  email     String
+  codeHash  String   @map("code_hash")
+  attempts  Int      @default(0)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("otp_verifications")
 }
 
 model BehavioralBaseline {
@@ -46,6 +60,7 @@ model Memory {
   embedding        Unsupported("vector(768)")?
   metadata         Json?
   sensitivityLevel Int                    @default(1) @map("sensitivity_level")
+  isDeleted        Boolean                @default(false) @map("is_deleted")
   createdAt        DateTime               @default(now()) @map("created_at")
 
   user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -70,6 +85,7 @@ model Session {
   id          String    @id @default(uuid())
   userId      String
   isIncognito Boolean   @default(false)
+  isDeleted   Boolean   @default(false) @map("is_deleted")
   messages    Message[]
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())

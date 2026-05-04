@@ -2,7 +2,9 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { jwtDecode } from 'jwt-decode';
 import { useChatStore } from '@/store/useChatStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useVibeStore } from '@/store/useVibeStore';
 import { useLocalCache } from '@/hooks/useLocalCache';
 import { useHapticFeedback } from '@/components/vibe/HapticFeedback';
@@ -45,19 +47,31 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }: { children: ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [token, setToken] = useState<string | null>(null); // In-memory token storage
   const [showAccountLink, setShowAccountLink] = useState(false);
   const [accountLinkData, setAccountLinkData] = useState<AccountLinkSuggestionPayload | null>(null);
   
+  const { user, token, setToken, setUser } = useAuthStore();
   const { initializeCache, queueMessage, isOffline } = useLocalCache();
   const { triggerStrong, triggerSoft } = useHapticFeedback();
   const socketRef = useRef<Socket | null>(null);
 
-  // Method to update guest token from memory
+  // Method to update guest token
   const updateGuestToken = useCallback((newToken: string) => {
-    console.log('[Socket] Setting guest token in memory');
+    console.log('[Socket] Setting guest token');
     setToken(newToken);
-  }, []);
+    
+    try {
+      const decoded: any = jwtDecode(newToken);
+      setUser({
+        id: decoded.id,
+        email: decoded.email,
+        username: decoded.username,
+        isGuest: decoded.isGuest,
+      });
+    } catch (err) {
+      console.error('Failed to decode guest token', err);
+    }
+  }, [setToken, setUser]);
 
   // Use refs for triggers to prevent socket reconnection when settings change
   const triggerStrongRef = useRef(triggerStrong);
@@ -78,8 +92,8 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
       const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
       
-      // Try memory token first, then localStorage (for persistent users)
-      const currentToken = token || (typeof window !== 'undefined' ? localStorage.getItem('ami_soul_token') : null);
+      // Try store token
+      const currentToken = token;
 
       socketInstance = io(socketUrl, {
         auth: currentToken ? { token: currentToken } : undefined,
@@ -98,6 +112,19 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       socketInstance.on(SOCKET_EVENTS.CONNECT, async () => {
         console.log('[Socket] Connected');
         useVibeStore.getState().setConnectionStatus('connected');
+        
+        // On connection, ensure user info is decoded if not already there
+        if (token && !user) {
+          try {
+            const decoded: any = jwtDecode(token);
+            setUser({
+              id: decoded.id,
+              email: decoded.email,
+              username: decoded.username,
+              isGuest: decoded.isGuest,
+            });
+          } catch (e) {}
+        }
         
         // Process outbox queue on connect
         const outbox = await cache.getOutbox();
@@ -215,7 +242,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       });
 
       socketInstance.on(SOCKET_EVENTS.GUEST_AUTH, (data: GuestAuthPayload) => {
-        console.log('[Socket] Guest auth received, saving token to memory');
+        console.log('[Socket] Guest auth received, saving token');
         updateGuestToken(data.token);
       });
 
@@ -247,7 +274,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         socketInstance.disconnect();
       }
     };
-  }, [initializeCache, token, updateGuestToken]);
+  }, [initializeCache, token, user, setUser, updateGuestToken]);
 
   const sendMessage = useCallback((content: string, metadata?: MessageMetadata) => {
     if (isOffline()) {

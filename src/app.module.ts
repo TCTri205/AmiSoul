@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
 import { RedisModule } from './redis/redis.module';
 import { AceModule } from './ace/ace.module';
+import { PrivacyModule } from './privacy/privacy.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AceModule } from './ace/ace.module';
     AuthModule,
     ChatModule,
     AceModule,
+    PrivacyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

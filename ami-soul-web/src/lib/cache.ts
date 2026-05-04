@@ -140,7 +140,8 @@ export const addToOutbox = async (message: QueuedMessage): Promise<number | unde
   try {
     const db = await initDB();
     if (!db) return;
-    return await db.add('outbox', message);
+    const result = await db.add('outbox', message);
+    return result as number;
   } catch (error) {
     console.error('[Cache] addToOutbox failed:', error);
     return undefined;

@@ -114,7 +114,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         created_at as "createdAt",
         1 - (embedding <=> ${vectorString}::vector) as similarity
       FROM memories
-      WHERE user_id = ${userId}
+      WHERE user_id = ${userId} AND is_deleted = false
       ORDER BY similarity DESC
       LIMIT ${limit};
     `;
