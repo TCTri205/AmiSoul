@@ -26,7 +26,14 @@ interface ChatState {
   setTypingState: (state: TypingState) => void;
   setReplyToMessage: (message: Message | null) => void;
   clearStreamingChunks: (messageId?: string) => void;
-  
+  toggleReaction: (messageId: string, emoji: string) => void;
+
+  // Preemption Actions
+  setConsecutiveInterrupts: (count: number) => void;
+  setBatchModeActive: (active: boolean) => void;
+  incrementInterrupts: () => void;
+  resetInterrupts: () => void;
+
   // Timeout Actions
   startTypingTimeout: () => void;
   clearTypingTimeouts: () => void;
@@ -39,6 +46,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   typingState: 'none',
   streamingChunks: {},
   replyToMessage: null,
+  consecutiveInterrupts: 0,
+  batchModeActive: false,
   lastChunkTimestamp: null,
   typingTimeoutId: null,
   errorTimeoutId: null,
@@ -119,6 +128,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         timestamp: new Date(),
         status: 'sent',
         isInterrupted,
+        interruptedAt: isInterrupted ? content.length : undefined,
       };
 
       const newChunks = { ...state.streamingChunks };
@@ -150,6 +160,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return { streamingChunks: {} };
     }),
 
+  toggleReaction: (messageId, emoji) =>
+    set((state) => ({
+      messages: state.messages.map((msg) => {
+        if (msg.id !== messageId) return msg;
+
+        const reactions = [...(msg.reactions || [])];
+        const index = reactions.findIndex((r) => r.emoji === emoji);
+
+        if (index > -1) {
+          // Remove or decrement
+          if (reactions[index].count > 1) {
+            reactions[index] = { ...reactions[index], count: reactions[index].count - 1 };
+          } else {
+            reactions.splice(index, 1);
+          }
+        } else {
+          // Add new
+          reactions.push({ emoji, count: 1 });
+        }
+
+        return { ...msg, reactions };
+      }),
+    })),
+
+  setConsecutiveInterrupts: (consecutiveInterrupts) => set({ consecutiveInterrupts }),
+  setBatchModeActive: (batchModeActive) => set({ batchModeActive }),
+  incrementInterrupts: () => set((state) => ({ consecutiveInterrupts: state.consecutiveInterrupts + 1 })),
+  resetInterrupts: () => set({ consecutiveInterrupts: 0, batchModeActive: false }),
+
   startTypingTimeout: () => {
     const { clearTypingTimeouts } = get();
     clearTypingTimeouts();
@@ -180,6 +219,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
       typingState: 'none',
       streamingChunks: {},
       lastChunkTimestamp: null,
+    });
+  },
+}));
+Timestamp: null,
     });
   },
 }));

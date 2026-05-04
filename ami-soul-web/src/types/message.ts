@@ -15,6 +15,7 @@ export interface Message {
   replyToId?: string;
   isCrisis?: boolean;
   isInterrupted?: boolean;
+  interruptedAt?: number; // Character index where the message was cut
 }
 
 export interface StreamChunk {

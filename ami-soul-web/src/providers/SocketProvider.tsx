@@ -15,7 +15,11 @@ import type {
   VibeUpdatePayload, 
   AiResponsePayload,
   SocketErrorPayload,
-  AccountLinkSuggestionPayload
+  AccountLinkSuggestionPayload,
+  BatchModeStartPayload,
+  UserAudioPayload,
+  UserImagePayload,
+  GuestAuthPayload
 } from '@/types/socket.types';
 import { AccountLinkSheet } from '@/components/layout/AccountLinkSheet';
 
@@ -24,6 +28,8 @@ type SocketContextValue = {
   sendMessage: (content: string, metadata?: MessageMetadata) => void;
   sendInterrupt: (payload?: { messageId?: string }) => void;
   sendReaction: (messageId: string, emoji: string) => void;
+  sendAudio: (payload: UserAudioPayload) => void;
+  sendImage: (payload: UserImagePayload) => void;
   updateGuestToken: (token: string) => void;
 };
 
@@ -140,6 +146,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
       socketInstance.on(SOCKET_EVENTS.PROCESSING_START, () => {
         useChatStore.getState().setTypingState('initial');
         useChatStore.getState().startTypingTimeout();
+        useChatStore.getState().resetInterrupts();
       });
 
       socketInstance.on(SOCKET_EVENTS.MESSAGE_ACK, (data: MessageAckPayload) => {
@@ -218,6 +225,11 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         setShowAccountLink(true);
       });
 
+      socketInstance.on(SOCKET_EVENTS.BATCH_MODE_START, (data: BatchModeStartPayload) => {
+        console.log('[Socket] Batch Mode Started:', data.message);
+        useChatStore.getState().setBatchModeActive(true);
+      });
+
       socketInstance.on(SOCKET_EVENTS.ERROR, (err: SocketErrorPayload) => {
         console.error('[Socket] Server Error:', err);
       });
@@ -261,11 +273,25 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const sendAudio = useCallback((payload: UserAudioPayload) => {
+    if (socketRef.current) {
+      socketRef.current.emit(SOCKET_EVENTS.USER_AUDIO, payload);
+    }
+  }, []);
+
+  const sendImage = useCallback((payload: UserImagePayload) => {
+    if (socketRef.current) {
+      socketRef.current.emit(SOCKET_EVENTS.USER_IMAGE, payload);
+    }
+  }, []);
+
   const value: SocketContextValue = {
     socket,
     sendMessage,
     sendInterrupt,
     sendReaction,
+    sendAudio,
+    sendImage,
     updateGuestToken,
   };
 

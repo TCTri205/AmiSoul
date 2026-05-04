@@ -4,21 +4,41 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useChatStore } from '@/store/useChatStore';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
-import { useSocket } from '@/providers/SocketProvider';
+import { useSocket } from '@/providers/SocketProvider';        
+import { useToast } from '@/hooks/use-toast';
 
 const ChatContainer = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
-  
+  const { toast } = useToast();
+
   const { 
     messages, 
     isStreaming, 
     streamingChunks, 
-    typingState 
+    typingState,
+    batchModeActive,
+    consecutiveInterrupts,
+    resetInterrupts
   } = useChatStore();
 
-  const { sendMessage: socketSendMessage } = useSocket();
+  const { sendMessage: socketSendMessage } = useSocket();      
 
+  // Watch for batch mode or excessive interrupts
+  useEffect(() => {
+    if (batchModeActive || consecutiveInterrupts > 2) {
+      toast({
+        title: "Chế độ gom tin",
+        description: "Ami đang đọc hết tin của bạn để trả lời một lần cho kỹ nhé 🧠",
+        duration: 5000,
+      });
+      
+      if (consecutiveInterrupts > 2) {
+        // Prevent spamming the toast by resetting count or setting a flag
+        // Here we just keep it, but in a real app we might want to only show once per "session"
+      }
+    }
+  }, [batchModeActive, consecutiveInterrupts, toast]);
   const handleScroll = () => {
     if (!containerRef.current) return;
     

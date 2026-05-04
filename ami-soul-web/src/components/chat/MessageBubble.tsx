@@ -1,10 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Message } from '@/types/message';
+import { useChatStore } from '@/store/useChatStore';
+import { useSocket } from '@/providers/SocketProvider';
+import { useHapticFeedback } from '@/components/vibe/HapticFeedback';
+import ReactionBar from './ReactionBar';
 import { cn } from '@/lib/utils';
 
 interface MessageBubbleProps {
@@ -26,9 +30,48 @@ const MessageBubble = ({
   streamingContent,
   showTimestamp = false 
 }: MessageBubbleProps) => {
+  const [showReactionBar, setShowReactionBar] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  
+  const { toggleReaction } = useChatStore();
+  const { sendReaction } = useSocket();
+  const { triggerSoft } = useHapticFeedback();
+  
   const isUser = message.role === 'user';
   const isCrisis = message.isCrisis;
   const content = isStreaming ? streamingContent : message.content;
+
+  const handleReactionSelect = (emoji: string) => {
+    toggleReaction(message.id, emoji);
+    sendReaction(message.id, emoji);
+    triggerSoft();
+    setShowReactionBar(false);
+  };
+
+  // Long press for mobile
+  const handleTouchStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      setShowReactionBar(true);
+      triggerSoft();
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
+
+  // Hover for desktop
+  const handleMouseEnter = () => {
+    if (window.matchMedia('(hover: hover)').matches) {
+      setShowReactionBar(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setShowReactionBar(false);
+  };
 
   // Custom component for markdown to handle *action* text and tel links
   const components = {
@@ -56,6 +99,10 @@ const MessageBubble = ({
     <motion.div
       initial={isUser ? { opacity: 0, y: 10 } : { opacity: 0, x: -10 }}
       animate={{ opacity: 1, y: 0, x: 0 }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       transition={{ 
         type: "spring",
         stiffness: 400,
@@ -64,12 +111,23 @@ const MessageBubble = ({
         duration: isUser ? 0.1 : 0.15 
       }}
       className={cn(
-        "flex flex-col max-w-[85%]",
+        "flex flex-col max-w-[85%] group relative",
         isUser ? "ml-auto items-end mb-6" : "mr-auto items-start mb-4",
         message.isInterrupted && "opacity-60 grayscale-[0.2]"
       )}
       aria-label={`Tin nhắn từ ${isUser ? 'bạn' : 'Ami'}: ${content || ''}`}
     >
+      <AnimatePresence>
+        {showReactionBar && !isStreaming && (
+          <div className={cn(
+            "absolute -top-10 z-30",
+            isUser ? "right-0" : "left-0"
+          )}>
+            <ReactionBar onSelect={handleReactionSelect} />
+          </div>
+        )}
+      </AnimatePresence>
+
       <div
         className={cn(
           "relative px-4 py-3 backdrop-blur-md shadow-sm transition-all duration-500 overflow-hidden break-words",
@@ -79,7 +137,8 @@ const MessageBubble = ({
                 "bg-white/10 dark:bg-black/40 text-foreground rounded-2xl rounded-bl-md border shadow-inner",
                 isCrisis 
                   ? "border-blue-400/50 bg-blue-50/5 dark:bg-blue-900/10 shadow-blue-500/10" 
-                  : "border-white/10 dark:border-white/5"
+                  : "border-white/10 dark:border-white/5",
+                message.isInterrupted && "after:absolute after:inset-0 after:bg-gradient-to-t after:from-background/40 after:to-transparent after:pointer-events-none"
               )
         )}
       >
@@ -106,6 +165,26 @@ const MessageBubble = ({
           </div>
         )}
       </div>
+
+      {/* Reaction Badges */}
+      {message.reactions && message.reactions.length > 0 && (
+        <div className={cn(
+          "flex flex-wrap gap-1 mt-1",
+          isUser ? "justify-end" : "justify-start"
+        )}>
+          {message.reactions.map((r) => (
+            <motion.div
+              key={r.emoji}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="flex items-center gap-1 px-1.5 py-0.5 bg-white/40 dark:bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-[10px]"
+            >
+              <span>{r.emoji}</span>
+              {r.count > 1 && <span className="font-bold opacity-70">{r.count}</span>}
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       <AnimatePresence>
         {showTimestamp && (

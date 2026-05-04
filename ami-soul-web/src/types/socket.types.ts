@@ -48,6 +48,24 @@ export interface SocketErrorPayload {
   [key: string]: unknown;
 }
 
+export interface UserAudioPayload {
+  audioBase64: string;
+  mimeType: string;
+  duration?: number;
+  messageId?: string;
+}
+
+export interface UserImagePayload {
+  images: string[]; // Base64 strings
+  mimeTypes: string[];
+  messageId?: string;
+}
+
+export interface BatchModeStartPayload {
+  message?: string;
+  timestamp: string;
+}
+
 export interface AccountLinkSuggestionPayload {
   bonding_score: number;
   message: string;
