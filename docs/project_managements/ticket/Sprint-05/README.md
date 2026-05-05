@@ -19,8 +19,8 @@ Xây dựng lớp Frontend "Safe Harbor" (Bến đỗ an toàn) bằng Next.js 1
 | [T5.10](T5.10_Media_Input_Preemption.md) | Media Input (Mic) & Preemption/Interrupt UI | ✅ Done | P1 |
 | [T5.11](T5.11_Media_Processing_Backend.md) | Stage 0: Media Processing Service (Backend) | ✅ Done | P1 |
 | [T5.12](T5.12_Account_Linking_Backend.md) | Auth: Guest Linking & Data Migration (Backend) | ✅ Done | P1 |
-| [T5.13](T5.13_Settings_Privacy_UI.md) | UI: Settings Page & Privacy Controls | 🟢 Ready | P2 |
-| [T5.14](T5.14_Privacy_Data_API.md) | Privacy: Data Deletion & GDPR API (Backend) | 🟢 Ready | P2 |
+| [T5.13](T5.13_Settings_Privacy_UI.md) | UI: Settings Page & Privacy Controls | ✅ Done | P2 |
+| [T5.14](T5.14_Privacy_Data_API.md) | Privacy: Data Deletion & GDPR API (Backend) | ✅ Done | P2 |
 
 ## 🔗 Liên kết Hữu ích
 - **Epic gốc:** [[EPIC-05] Safe Harbor Frontend](../epic/EPIC-05_Safe_Harbor_Frontend.md)
